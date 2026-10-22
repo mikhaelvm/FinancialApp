@@ -32,10 +32,10 @@ struct ReportsView: View {
                 if !hideAmounts && !snapshot.categories.isEmpty {
                     Chart(Array(snapshot.categories.prefix(8))) { item in
                         BarMark(x: .value("R$", Double(item.cents) / 100), y: .value("Categoria", item.name))
-                            .foregroundStyle(LedgerTheme.accent)
+                            .foregroundStyle(item.color)
                     }.frame(height: CGFloat(max(160, min(8, snapshot.categories.count) * 38)))
                 }
-                ForEach(snapshot.categories) { item in MoneyRow(title: item.name, cents: item.cents) }
+                ForEach(snapshot.categories) { item in CategoryExpenseRow(item: item) }
                 if snapshot.categories.isEmpty { Text("Sem despesas neste mês").foregroundStyle(.secondary) }
             } header: { Text("Despesas por categoria") } footer: {
                 Text("Gastos na conta e parcelas por vencimento. Para meses futuros, valores de assinaturas são previsões. O resultado da conta usa apenas movimentos realizados.")

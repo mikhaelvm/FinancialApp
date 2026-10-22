@@ -5,6 +5,7 @@ struct CategoryExpense: Identifiable {
     let id: String
     let name: String
     let colorName: String
+    let symbol: String
     var cents: Int64
 }
 
@@ -55,7 +56,7 @@ final class DashboardViewModel {
         func add(category: Category?, cents: Int64) {
             let key = category?.id.uuidString ?? "other"
             var row = categories[key] ?? CategoryExpense(id: key, name: category?.name ?? "Sem categoria",
-                                                         colorName: category?.colorName ?? "teal", cents: 0)
+                                                         colorName: category?.colorName ?? "teal", symbol: category?.symbol ?? "square.grid.2x2", cents: 0)
             row.cents += cents
             categories[key] = row
         }

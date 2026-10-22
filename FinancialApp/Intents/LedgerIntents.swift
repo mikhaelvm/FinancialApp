@@ -16,6 +16,7 @@ enum LedgerIntentSupport {
         try Persistence.seed(context: context)
         try RecurrenceEngine().synchronize(context: context)
         NotificationService.shared.refresh(context: context)
+        WidgetSnapshotService.refresh(context: context)
         return context
     }
     @MainActor static func record(title: String, amount: Double, date: Date?, kind: TransactionKind,
@@ -26,6 +27,7 @@ enum LedgerIntentSupport {
         try TransactionViewModel().saveCash(context: context, title: title, amountText: Money.input(cents), kind: kind,
                                             date: date ?? .now, category: categories.first { $0.id == category?.id })
         NotificationService.shared.refresh(context: context)
+        WidgetSnapshotService.refresh(context: context)
         return "\(kind.title) de \(Money.format(cents)) registrada: \(title)."
     }
 }

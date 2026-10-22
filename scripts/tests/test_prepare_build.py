@@ -36,6 +36,18 @@ class BuildSpecTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             prepare_spec(self.source, 16)
 
+    def test_widget_and_control_targets_share_local_snapshot_and_intent_sources(self):
+        root = Path(__file__).resolve().parents[2]
+        self.assertEqual(self.source.count('- path: Shared'), 2)
+        self.assertIn('LEDGER_WIDGET_EXTENSION', self.source)
+        self.assertIn('LEDGER_APP_GROUP: group.com.mikhael.FinancialApp', self.source)
+        import plistlib
+        for file in ['FinancialApp/Info.plist', 'LedgerWidgets/Info.plist']:
+            with open(root / file, 'rb') as stream:
+                self.assertEqual(plistlib.load(stream)['LedgerAppGroup'], '$(LEDGER_APP_GROUP)')
+        with open(root / 'Shared/Ledger.entitlements', 'rb') as stream:
+            self.assertEqual(plistlib.load(stream)['com.apple.security.application-groups'], ['$(LEDGER_APP_GROUP)'])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -63,6 +63,16 @@ struct PaymentAgendaView: View {
                             }
                             Spacer()
                             Text(Money.format(payment.amountCents)).font(.subheadline.weight(.semibold))
+                            Menu {
+                                Button("Excluir pagamento", role: .destructive) { deleting = payment }
+                            } label: { Image(systemName: "ellipsis.circle").padding(6) }
+                                .accessibilityLabel("Ações do pagamento \(payment.title)")
+                        }
+                        .swipeActions {
+                            Button("Excluir", role: .destructive) { deleting = payment }.tint(.red)
+                        }
+                        .contextMenu {
+                            Button("Excluir pagamento", role: .destructive) { deleting = payment }
                         }
                     }
                 }
@@ -77,7 +87,7 @@ struct PaymentAgendaView: View {
                                 .swipeActions {
                                     if item.kind == .scheduled, let payment = scheduled.first(where: { $0.id == item.sourceID }) {
                                         Button("Pago", systemImage: "checkmark") { confirming = payment }.tint(LedgerTheme.accent)
-                                        Button("Excluir", role: .destructive) { deleting = payment }
+                                        Button("Excluir", role: .destructive) { deleting = payment }.tint(.red)
                                     }
                                 }
                         }
@@ -104,10 +114,18 @@ struct PaymentAgendaView: View {
             }
         } message: { Text("Confirme somente se você já pagou. O valor será registrado como despesa no extrato de hoje.") }
         .confirmationDialog("Excluir conta agendada?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
-            Button("Excluir", role: .destructive) {
+            Button(deleting?.isPaid == true ? "Excluir somente o agendamento" : "Excluir", role: .destructive) {
                 if let deleting { perform { try ScheduledPaymentViewModel().delete(deleting, context: context) } }
                 deleting = nil
             }
+            if deleting?.isPaid == true {
+                Button("Excluir também a despesa no extrato", role: .destructive) {
+                    if let deleting { perform { try ScheduledPaymentViewModel().delete(deleting, context: context, removeRecordedExpense: true) } }
+                    deleting = nil
+                }
+            }
+        } message: {
+            Text(deleting?.isPaid == true ? "Excluir somente o agendamento mantém a despesa já realizada no extrato. Você também pode excluir os dois registros." : "Esta conta e seus lembretes serão removidos. Faturas e assinaturas são gerenciadas nas respectivas telas.")
         }
         .financeError($error)
     }
@@ -138,6 +156,7 @@ struct ScheduledPaymentForm: View {
     @State private var categoryID: UUID?
     @State private var error: String?
     @State private var confirmPayment = false
+    @State private var confirmDelete = false
 
     var body: some View {
         NavigationStack {
@@ -158,6 +177,7 @@ struct ScheduledPaymentForm: View {
                 }.font(.footnote).foregroundStyle(.secondary)
                 if payment != nil {
                     Section { Button("Já paguei esta conta", systemImage: "checkmark.circle.fill") { confirmPayment = true } }
+                    Section { Button("Excluir agendamento", role: .destructive) { confirmDelete = true }.foregroundStyle(.red) }
                 }
             }
             .navigationTitle(payment == nil ? "Agendar conta" : "Editar conta")
@@ -188,6 +208,13 @@ struct ScheduledPaymentForm: View {
                 }
             } message: { Text("O valor salvo da conta será descontado do saldo. Para alterar o valor, salve a edição antes de pagar.") }
             .financeError($error)
+            .confirmationDialog("Excluir agendamento?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Excluir", role: .destructive) {
+                    guard let payment else { return }
+                    do { try ScheduledPaymentViewModel().delete(payment, context: context); dismiss() }
+                    catch { self.error = error.localizedDescription }
+                }
+            }
         }
     }
 }

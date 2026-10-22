@@ -15,6 +15,11 @@ final class LedgerRouter {
     var showNewExpense = false
     var showNewIncome = false
 
+    func reset() {
+        selectedTab = .dashboard; cardPath = []; searchTerm = ""; selectedTransactionID = nil
+        showNewExpense = false; showNewIncome = false
+    }
+
     func search(_ term: String) {
         searchTerm = term
         selectedTab = .transactions

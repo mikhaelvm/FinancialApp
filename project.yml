@@ -12,14 +12,18 @@ settings:
     SWIFT_VERSION: '5.0'
     IPHONEOS_DEPLOYMENT_TARGET: '17.0'
     TARGETED_DEVICE_FAMILY: '1,2'
-    MARKETING_VERSION: '1.2.0'
-    CURRENT_PROJECT_VERSION: '3'
+    MARKETING_VERSION: '1.3.0'
+    CURRENT_PROJECT_VERSION: '4'
     CODE_SIGNING_ALLOWED: NO
+    LEDGER_APP_GROUP: group.com.mikhael.FinancialApp
+    CODE_SIGN_ENTITLEMENTS: Shared/Ledger.entitlements
 targets:
   FinancialApp:
     type: application
     platform: iOS
     sources:
+      - path: Shared
+        excludes: [Ledger.entitlements]
       - path: FinancialApp
         excludes: [Info.plist, Settings.bundle]
       - path: FinancialApp/Settings.bundle
@@ -38,12 +42,17 @@ targets:
       - sdk: Charts.framework
       - sdk: AppIntents.framework
       - sdk: UserNotifications.framework
+      - sdk: WidgetKit.framework
+      - sdk: PDFKit.framework
+      - sdk: Vision.framework
       - target: LedgerWidgets
         embed: true
   LedgerWidgets:
     type: app-extension
     platform: iOS
     sources:
+      - path: Shared
+        excludes: [Ledger.entitlements]
       - path: LedgerWidgets
         excludes: [Info.plist]
     settings:
@@ -52,10 +61,12 @@ targets:
         INFOPLIST_FILE: LedgerWidgets/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         APPLICATION_EXTENSION_API_ONLY: YES
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) LEDGER_WIDGET_EXTENSION"
         SKIP_INSTALL: YES
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
+      - sdk: AppIntents.framework
   FinancialAppTests:
     type: bundle.unit-test
     platform: iOS
@@ -64,6 +75,7 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.mikhael.FinancialAppTests
+        CODE_SIGN_ENTITLEMENTS: ''
     dependencies:
       - target: FinancialApp
 schemes:

@@ -29,6 +29,7 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: FinanceEvents.didChange)
             .debounce(for: .milliseconds(350), scheduler: RunLoop.main)) { _ in
                 NotificationService.shared.refresh(context: context)
+                WidgetSnapshotService.refresh(context: context)
             }
         .task { refresh() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { refresh() } }
@@ -48,6 +49,7 @@ struct RootView: View {
             if !initialized { try Persistence.seed(context: context); initialized = true }
             try RecurrenceEngine().synchronize(context: context)
             NotificationService.shared.refresh(context: context)
+            WidgetSnapshotService.refresh(context: context)
         } catch { self.error = error.localizedDescription }
     }
 }

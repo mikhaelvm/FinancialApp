@@ -9,6 +9,7 @@ struct FinancialApp: App {
     private let startupError: String?
     @AppStorage("ledger.appearance") private var appearance = "system"
     @AppStorage("ledger.accent") private var accent = "teal"
+    @AppStorage("ledger.resetRevision") private var resetRevision = 0
 
     init() {
         UNUserNotificationCenter.current().delegate = LedgerNotificationDelegate.shared
@@ -25,6 +26,7 @@ struct FinancialApp: App {
         WindowGroup {
             if let container {
                 RootView().modelContainer(container)
+                    .id(resetRevision)
                     .tint((LedgerAccent(rawValue: accent) ?? .teal).color)
                     .preferredColorScheme((LedgerAppearance(rawValue: appearance) ?? .system).colorScheme)
             } else {

@@ -24,6 +24,33 @@ struct CategoryLabel: View {
     }
 }
 
+extension CategoryExpense {
+    var color: Color {
+        switch colorName {
+        case "purple": return .purple
+        case "orange": return .orange
+        case "blue": return .blue
+        case "green": return .green
+        case "pink": return .pink
+        case "red": return .red
+        default: return .teal
+        }
+    }
+}
+
+struct CategoryExpenseRow: View {
+    let item: CategoryExpense
+    @AppStorage("ledger.hideAmounts") private var hideAmounts = false
+    var body: some View {
+        HStack(spacing: 12) {
+            SymbolTile(symbol: item.symbol, tint: item.color)
+            Text(item.name)
+            Spacer(minLength: 8)
+            Text(hideAmounts ? "••••" : Money.format(item.cents)).monospacedDigit()
+        }.accessibilityElement(children: .combine)
+    }
+}
+
 struct ErrorAlert: ViewModifier {
     @Binding var message: String?
     func body(content: Content) -> some View {

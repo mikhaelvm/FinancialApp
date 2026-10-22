@@ -17,6 +17,25 @@ final class PersistenceAndCashFlowTests: XCTestCase {
         XCTAssertEqual(try container.mainContext.fetchCount(FetchDescriptor<Category>()), 9)
     }
 
+    func testCategorySummaryKeepsCustomSymbolsAndColors() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let housing = Category(name: "Moradia", symbol: "house.fill", colorName: "blue")
+        let other = Category(name: "Outros", symbol: "star.fill", colorName: "pink")
+        context.insert(housing); context.insert(other)
+        context.insert(Transaction(title: "Aluguel", amountCents: 250000, kind: .expense, date: .now, category: housing))
+        context.insert(Transaction(title: "Serviço", amountCents: 2500, kind: .expense, date: .now, category: other))
+        try context.save()
+        let snapshot = DashboardViewModel().snapshot(transactions: try context.fetch(FetchDescriptor<Transaction>()),
+                                                     cards: [], subscriptions: [], payments: [], month: .now)
+        XCTAssertEqual(snapshot.categories.map(\.symbol), ["house.fill", "star.fill"])
+        XCTAssertEqual(snapshot.categories.map(\.colorName), ["blue", "pink"])
+        other.symbol = "heart.fill"
+        let updated = DashboardViewModel().snapshot(transactions: try context.fetch(FetchDescriptor<Transaction>()),
+                                                    cards: [], subscriptions: [], payments: [], month: .now)
+        XCTAssertEqual(updated.categories.last?.symbol, "heart.fill")
+    }
+
     func testPurchasePersistsInversesAndDatesAcrossTenMonths() throws {
         let container = try Persistence.makeContainer(inMemory: true)
         let context = container.mainContext

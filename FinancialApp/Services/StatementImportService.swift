@@ -19,7 +19,7 @@ enum StatementImportService {
             "\(StatementParser.dayKey($0.date))|\(-$0.amountCents)"
         })
         let scheduledIDs = Set(try context.fetch(FetchDescriptor<ScheduledPayment>()).compactMap(\.paidTransactionID))
-        let managedCash = Set(transactions.filter { $0.card == nil && ($0.isAutomaticRecurrence || scheduledIDs.contains($0.id)) }.map {
+        let managedCash = Set(transactions.filter { $0.card == nil && ($0.isAutomaticRecurrence || $0.isImportedStatement || scheduledIDs.contains($0.id)) }.map {
             "\(StatementParser.dayKey($0.date))|\($0.kind == .expense ? -$0.amountCents : $0.amountCents)"
         })
         var seen = existing
@@ -29,7 +29,7 @@ enum StatementImportService {
                 || signatures.contains("\(StatementParser.dayKey(row.date))|\(row.signedCents)|\(StatementParser.normalize(row.title))")
                 || invoicePayments.contains("\(StatementParser.dayKey(row.date))|\(row.signedCents)")
                 || managedCash.contains("\(StatementParser.dayKey(row.date))|\(row.signedCents)")
-            row.selected = !row.isDuplicate && row.date <= FinanceDate.day(today)
+            row.selected = !row.isDuplicate && !row.requiresReview && row.date <= FinanceDate.day(today)
             row.importAsNew = false
             let name = StatementParser.normalize(row.title)
             let rules: [(String, [String])] = [
@@ -47,7 +47,7 @@ enum StatementImportService {
 
     static func commit(_ rows: [StatementRow], context: ModelContext, today: Date = .now) throws -> Int {
         let selected = rows.filter(\.selected)
-        guard selected.allSatisfy({ $0.signedCents != 0 && $0.signedCents != Int64.min && abs($0.signedCents) <= Money.maximumCents && $0.date <= FinanceDate.day(today) && !$0.title.isEmpty }) else {
+        guard selected.allSatisfy({ $0.signedCents != 0 && $0.signedCents != Int64.min && abs($0.signedCents) <= Money.maximumCents && $0.date <= FinanceDate.day(today) && !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
             throw FinanceError.invalid("Revise os valores e datas. Lançamentos futuros não são movimentos realizados.")
         }
         var keys = Set(try context.fetch(FetchDescriptor<Transaction>()).compactMap(\.recurrenceKey))

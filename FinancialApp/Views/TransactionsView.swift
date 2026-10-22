@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct TransactionsView: View {
+    @State private var importingStatement = false
     @Environment(\.modelContext) private var context
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
     @Query(sort: \InvoicePayment.date, order: .reverse) private var payments: [InvoicePayment]
@@ -30,7 +31,7 @@ struct TransactionsView: View {
                     }.buttonStyle(.plain)
                     .swipeActions {
                         if !managed {
-                            Button("Excluir", role: .destructive) { deleting = transaction }
+                            Button("Excluir", role: .destructive) { deleting = transaction }.tint(.red)
                             Button("Editar") { editing = transaction }.tint(.blue)
                         }
                     }
@@ -54,7 +55,7 @@ struct TransactionsView: View {
         .toolbar {
             Menu {
                 Button("Novo lançamento", systemImage: "plus") { showAdd = true }
-                NavigationLink { StatementImportView() } label: { Label("Importar extrato", systemImage: "square.and.arrow.down") }
+                Button("Importar extrato", systemImage: "square.and.arrow.down") { importingStatement = true }
             } label: { Label("Ações do extrato", systemImage: "ellipsis.circle") }
         }
         .sheet(isPresented: $showAdd) { AddTransactionView() }
@@ -72,6 +73,7 @@ struct TransactionsView: View {
                 self.deleting = nil
             }
         }
+        .statementImporter(isPresented: $importingStatement)
         .financeError($error)
     }
 

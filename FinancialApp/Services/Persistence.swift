@@ -48,7 +48,27 @@ enum Persistence {
 
     @MainActor static func seed(context: ModelContext) throws {
         let existing = Set(try context.fetch(FetchDescriptor<Category>()).map(\.name))
-        let defaults = [
+        insertDefaultCategories(context: context, excluding: existing)
+        try context.save()
+    }
+
+    @MainActor static func insertDefaultCategories(context: ModelContext, excluding existing: Set<String> = []) {
+        for (name, symbol, color) in defaultCategories where !existing.contains(name) {
+            context.insert(Category(name: name, symbol: symbol, colorName: color))
+        }
+    }
+
+    @MainActor static func resetCategories(_ existing: [Category], context: ModelContext) {
+        let names = Set(defaultCategories.map { $0.0 })
+        for category in existing where !names.contains(category.name) { context.delete(category) }
+        for (name, symbol, color) in defaultCategories {
+            if let category = existing.first(where: { $0.name == name }) {
+                category.symbol = symbol; category.colorName = color
+            } else { context.insert(Category(name: name, symbol: symbol, colorName: color)) }
+        }
+    }
+
+    private static let defaultCategories = [
             ("Streaming", "play.tv.fill", "purple"),
             ("Alimentação", "fork.knife", "orange"),
             ("Moradia", "house.fill", "blue"),
@@ -59,9 +79,4 @@ enum Persistence {
             ("Salário", "banknote.fill", "green"),
             ("Outros", "square.grid.2x2.fill", "teal")
         ]
-        for (name, symbol, color) in defaults where !existing.contains(name) {
-            context.insert(Category(name: name, symbol: symbol, colorName: color))
-        }
-        try context.save()
-    }
 }

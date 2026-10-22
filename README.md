@@ -2,7 +2,7 @@
 
 Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, sem CloudKit, servidor ou assinatura de sincronização. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
-## Versão 1.2
+## Versão 1.3
 
 - Ícone nativo do Icon Composer em **todos os builds SDK 26+**, com fundo contínuo, escala original e sem refratividade, sombra ou reflexos extras. Os PNGs com acabamento pré-renderizado não são mais usados como ícone.
 - Interface baseada em listas agrupadas, cores semânticas, fontes do sistema e superfícies discretas. Resumo, cartões, recorrências e Agenda seguem Light/Dark Mode e Dynamic Type.
@@ -10,8 +10,11 @@ Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações l
 - Orçamento mensal, meta de reserva, relatórios por mês e categorias com símbolos/cores personalizáveis.
 - Aparência automática/clara/escura, seis cores de destaque e opção para ocultar valores no resumo e listas. Essas preferências também aparecem nos Ajustes do iOS.
 - Backup completo em JSON pelo app Arquivos, restauração aditiva e exportação de transações em CSV.
-- Importação assistida de extratos bancários OFX/CSV, com prévia, seleção de lançamentos, categorias, revisão da natureza e detecção de duplicados.
-- Widgets de acesso rápido para despesas, receitas e Agenda, na Tela de Início e Tela Bloqueada, sem App Groups nem compartilhamento do banco.
+- Importação local de OFX/CSV/PDF direto pelo seletor de arquivos, com revisão, categorias e detecção de duplicados. PDF inclui extração de texto e OCR local; movimentos de PDF começam desmarcados.
+- Widgets informativos pequenos, médios e grandes com saldo, entradas, saídas, faturas, orçamento e próximos pagamentos; resumos na Tela Bloqueada. Compartilham somente um resumo local via App Groups, sem mover o banco SwiftData.
+- Quatro controles da Central de Controle (iOS 18+): nova despesa, nova receita, resumo e Agenda.
+- Paleta com amostras individuais e atualização imediata da cor; exclusão de agendamentos dentro da edição e menu de exclusão em Pagos.
+- Redefinição completa dos dados e preferências com confirmação; categorias e gráficos usam os símbolos e cores escolhidos.
 - Atalhos/Siri e lembretes de faturas, recorrências e contas agendadas continuam disponíveis.
 
 O bundle identifier permanece `com.mikhael.FinancialApp`. O nome exibido é Ledger; projeto e target continuam `FinancialApp` para preservar a identidade da instalação. Os seis modelos persistidos e o schema V2 não foram alterados nesta atualização.
@@ -27,7 +30,7 @@ git push
 
 Push em `main`/`master` inicia **Actions → Build Ledger IPA**. Também há **Run workflow**. Ao concluir, baixe **Artifacts → Ledger-unsigned**, extraia `Ledger.ipa` e assine/instale pelo seu fluxo habitual.
 
-O IPA contém `FinancialApp.app` e `PlugIns/LedgerWidgets.appex`. O instalador precisa preservar e assinar também a extensão para que os widgets apareçam. Não é necessário App Group ou iCloud para esses widgets. A assinatura de dispositivo continua sendo uma etapa externa ao pipeline unsigned. [Execução em dispositivo — Apple](https://help.apple.com/xcode/mac/current/en.lproj/dev5a825a1ca.html).
+O IPA contém `FinancialApp.app` e `PlugIns/LedgerWidgets.appex`. O instalador precisa preservar e assinar também a extensão para que os widgets apareçam. Widgets informativos precisam do App Group autorizado nos perfis de assinatura dos dois targets (veja abaixo). Não usam iCloud. A assinatura de dispositivo continua sendo uma etapa externa ao pipeline unsigned. [Execução em dispositivo — Apple](https://help.apple.com/xcode/mac/current/en.lproj/dev5a825a1ca.html).
 
 Para manter os registros, atualize a instalação existente com a mesma identidade e não desinstale antes. Faça um backup pelo Ledger antes de trocar de instalação ou aparelho.
 
@@ -49,9 +52,10 @@ O app mostra a data do último backup exportado com sucesso. Não há backup aut
 
 Abra **Extrato → menu de ações → Importar extrato**, ou **Ajustes → Dados, backup e extratos → Importar extrato bancário**.
 
-O seletor inclui **Itaú, Caixa, Bradesco, Banco do Brasil, Mercado Pago, Inter** e Outro banco. São aceitos:
+O botão abre imediatamente o seletor de arquivos do iOS. Não há seleção de banco/conta: ela não alterava o reconhecimento de colunas. Os cabeçalhos conhecidos de **Itaú, Caixa, Bradesco, Banco do Brasil, Mercado Pago e Inter** continuam reconhecidos automaticamente. São aceitos:
 
 - **OFX de conta** no padrão SGML ou XML: data, valor assinado, descrição e FITID. O identificador de conta do arquivo participa da detecção de duplicados. O saldo inicial/final não vira receita.
+- **PDF** com texto selecionável ou páginas digitalizadas via PDFKit/Vision. Até 50 páginas/15 MB, sem senha. Cada linha precisa permitir reconhecer data, descrição e valor; layouts com colunas fora de ordem podem ser recusados.
 - **CSV** separado por ponto e vírgula, vírgula ou tabulação, com campos entre aspas, quebras de linha e codificações UTF-8, UTF-16 e Windows-1252.
 - Colunas usuais de Data/Histórico/Lançamento/Descrição, Valor com sinal, D/C, Débito/Crédito separados e identificadores de transação.
 - No Mercado Pago, o mapeamento prefere impacto líquido em conta (`SETTLEMENT_NET_AMOUNT`, `TRANSACTION_NET_AMOUNT` ou colunas líquidas de débito/crédito), em vez do valor bruto.
@@ -60,18 +64,18 @@ Os bancos podem mudar cabeçalhos e formatos conforme conta, canal e tipo de rel
 
 ### Revisão antes de salvar
 
-1. Selecione banco e uma identificação da conta, útil para distinguir CSVs de contas diferentes.
-2. Escolha o arquivo. O processamento acontece em segundo plano, **no aparelho**, sem enviar dados a serviços externos.
+1. Toque em **Importar extrato** e escolha o arquivo no app Arquivos.
+2. O processamento acontece em segundo plano, **no aparelho**, sem enviar dados a serviços externos.
 3. No CSV, confira as colunas e use **Analisar colunas selecionadas** depois de qualquer ajuste. Não selecione a coluna Saldo como valor.
-4. Confira os totais de receitas/despesas e os lançamentos individuais. Você pode mudar natureza e categoria e desmarcar itens.
+4. Confira os totais de receitas/despesas e os lançamentos individuais. Você pode mudar natureza e categoria e desmarcar itens. Em PDF, todos começam desmarcados e permitem corrigir data, descrição e valor; a seleção em lote não inclui PDFs. Valores sem sinal não determinam a natureza com segurança: confirme Receita/Despesa individualmente.
 5. Possíveis duplicados começam desmarcados. Se forem movimentos realmente distintos, use **É outro movimento: importar como novo** explicitamente.
 6. Somente **Confirmar importação** altera o banco e o saldo.
 
-O app sugere categorias por palavras-chave, sempre editáveis na revisão. Importações anteriores são reconhecidas por FITID/identificadores e impressões digitais estáveis. Movimentos manuais semelhantes e pagamentos de faturas já registrados podem ser apontados como possíveis duplicados. CSV sem identificador é inerentemente menos preciso; a prévia e a opção de inclusão explícita permitem resolver casos ambíguos.
+O app sugere categorias por palavras-chave, sempre editáveis na revisão. Importações anteriores são reconhecidas por FITID/identificadores e impressões digitais estáveis. Movimentos manuais semelhantes e pagamentos de faturas já registrados podem ser apontados como possíveis duplicados. CSV/PDF sem identificador e contas diferentes com movimentos iguais são inerentemente menos precisos; a prévia e a opção de inclusão explícita permitem resolver casos ambíguos.
 
 Linhas inválidas são apresentadas separadamente e não viram movimentos. Lançamentos futuros não entram como realizados. Após importar, os movimentos ficam no Extrato com o selo **Extrato bancário** e podem ser editados ou excluídos.
 
-O importador trabalha em BRL e com extratos de **conta**. PDF, XLS/XLSX e faturas de cartão não são analisados nesta versão; exporte OFX/CSV da conta. O app não busca saldos online nem acessa senhas bancárias. Para evitar duplicar pagamentos já registrados, confira os itens sinalizados antes de confirmar.
+O importador trabalha em BRL e com extratos de **conta**. XLS/XLSX e faturas de cartão não são aceitos. PDF não é um padrão bancário estruturado: OCR pode errar números e sinais, e não há garantia de reconhecer todo layout. Se a prévia estiver incompleta ou incorreta, prefira OFX/CSV. O app não busca saldos online nem acessa senhas bancárias. Para evitar duplicar pagamentos já registrados, confira os itens sinalizados antes de confirmar.
 
 Referências dos formatos: [relatórios Mercado Pago](https://www.mercadopago.com.br/developers/pt/docs/qr-code/additional-content/reports/account-money/how-to-use), [exportação Bradesco](https://www.institucional.bradesco.com.br/simulador_bradesco_net_empresa/conteudo/perfil_corporate/extrato/pagfor_autorizacao.asp), [extratos Caixa](https://govconta.caixa.gov.br/sigovstatic/tour/servicos/serv_extrato02.htm).
 
@@ -91,13 +95,28 @@ Assinaturas e contas recorrentes têm ciclos semanal/mensal/anual. O dia origina
 
 ## Sistema e personalização
 
-- **Widgets:** adicione Ledger pela galeria de widgets. Pequeno/circular abre nova despesa; médio oferece despesa, receita e Agenda; retangular abre pagamentos. Não exibem saldos nem exigem acesso compartilhado ao banco.
+- **Widgets:** adicione Ledger pela galeria. Pequeno mostra saldo e faturas; médio acrescenta entradas e saídas; grande mostra orçamento e próximos pagamentos. Respeitam ocultação de valores e sinalizam o horário do resumo. Usam uma cópia agregada dos dados; não abrem o banco SwiftData. A atualização depende do orçamento de execução do WidgetKit e não é em tempo real.
+- **Central de Controle:** no iOS 18+, pressione a Central de Controle → Adicionar um Controle → Ledger. As ações abrem o app na tela correspondente, sem registrar dinheiro automaticamente. Os intents estão nos dois targets, conforme exigência do OpenIntent.
 - **Ajustes do iOS:** em Apps → Ledger estão aparência, cor e ocultação de valores. Orçamentos, categorias e arquivos ficam nos Ajustes dentro do app.
 - **Atalhos/Siri:** consultar resumo, registrar despesa/receita, agendar conta, abrir Agenda, buscar e abrir lançamentos. Consultas financeiras e gravações exigem autenticação. Frases: “Qual é meu saldo no Ledger?”, “Registrar gasto no Ledger” e “Agendar conta no Ledger”.
 - **Siri AI:** builds com SDK 27 habilitam o schema oficial `system.searchInApp`, que pesquisa o Extrato. Ações financeiras seguem via App Shortcuts, pois a Apple não oferece um domínio financeiro equivalente.
 - **Alertas:** configure horário e antecedência nos Ajustes do Ledger. Depois de agendados, funcionam com o app fechado. Mantemos os 60 alertas mais próximos dentro de 60 dias; abra o app periodicamente para renovar a fila. Pagamentos/edições/pausas removem ou atualizam alertas obsoletos. Foco e permissões do iOS influenciam a apresentação.
 
 Referências: [WidgetKit](https://developer.apple.com/documentation/widgetkit), [Settings bundle](https://developer.apple.com/documentation/foundation/building-a-settings-bundle-for-your-app), [Siri searchInApp](https://developer.apple.com/documentation/appintents/appschema/systemintent/searchinapp).
+
+## App Groups e assinatura dos widgets
+
+O identificador padrão é `group.com.mikhael.FinancialApp`, configurado em `LEDGER_APP_GROUP` no `project.yml`, nos dois Info.plist e em `Shared/Ledger.entitlements`. O grupo deve ser registrado/autorizado para a sua equipe e incluído nos perfis do app e da extensão. Se o identificador não estiver disponível para sua equipe, altere **LEDGER_APP_GROUP** e registre outro grupo. Isso não altera o bundle identifier nem o banco principal.
+
+O pipeline continua gerando um IPA **unsigned**. Ele não cria perfis, não registra grupos e não concede permissões de assinatura. Ao reassinar, preserve a extensão, use o mesmo grupo autorizado nos dois targets e mantenha o valor **LedgerAppGroup** dos dois Info.plist coerente com o grupo provisionado. Alguns instaladores removem/recriam entitlements e não oferecem App Groups em contas gratuitas. Sem autorização, o app continua local e funcional; o widget mostra uma orientação, nunca um saldo inventado. Consulte a disponibilidade da capability na sua conta antes de depender do dashboard fora do app. Nenhum dado vai para iCloud.
+
+Referências: [App Groups — Apple](https://support.apple.com/en-ie/guide/security/sec1a976c067/web), [capabilities por modalidade de conta](https://developer.apple.com/help/account/reference/supported-capabilities-ios), [configurar App Groups](https://help.apple.com/xcode/mac/current/en.lproj/dev8dd3880fe.html), [controles e OpenIntent](https://developer.apple.com/documentation/widgetkit/creating-controls-to-perform-actions-across-the-system), [OCR local com Vision](https://developer.apple.com/documentation/vision/recognizing-text-in-images).
+
+## Agenda e redefinição
+
+- Em uma conta a vencer/atrasada, abra a edição e toque em **Excluir agendamento**. O gesto lateral também continua disponível.
+- Em **Pagos**, use o botão de reticências ou deslize a linha. Você pode excluir somente o agendamento (preservando a despesa e o saldo) ou excluir também a despesa vinculada. A confirmação explica a diferença.
+- Em **Ajustes → Dados, backup e extratos → Apagar todos os dados e redefinir**, digite **APAGAR**. A operação remove os registros financeiros, restaura as nove categorias padrão, reseta aparência/orçamento/privacidade/lembretes e limpa o resumo dos widgets. Backups exportados no app Arquivos são preservados. A autorização de notificações concedida pelo iOS só pode ser alterada nos Ajustes do sistema.
 
 ## Build e organização
 
@@ -136,8 +155,17 @@ LedgerWidgets/LedgerWidgets.swift
 LedgerWidgets/Info.plist
 Tests/BackupServiceTests.swift
 Tests/StatementImportTests.swift
+FinancialApp/Services/PDFStatementReader.swift
+FinancialApp/Services/AppResetService.swift
+FinancialApp/Services/WidgetSnapshotService.swift
+Shared/LedgerWidgetStore.swift
+Shared/LedgerControlIntent.swift
+Shared/Ledger.entitlements
+LedgerWidgets/LedgerControls.swift
+Tests/PDFStatementTests.swift
+Tests/ResetAndAgendaTests.swift
 ```
 
-Há **40 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também quatro testes Python para preparação do build e configuração do ícone.
+Há **49 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também cinco testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As novas verificações nativas cobrem PDF, exclusão de pagamentos, redefinição e aparência das categorias.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.

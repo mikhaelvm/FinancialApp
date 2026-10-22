@@ -32,9 +32,14 @@ struct LedgerSettingsView: View {
                 Picker("Aparência", selection: $appearance) {
                     ForEach(LedgerAppearance.allCases) { Text($0.title).tag($0.rawValue) }
                 }
-                Picker("Cor de destaque", selection: $accent) {
-                    ForEach(LedgerAccent.allCases) { value in
-                        Label { Text(value.title) } icon: { Image(systemName: "circle.fill").foregroundStyle(value.color) }.tag(value.rawValue)
+                NavigationLink {
+                    LedgerAccentSettingsView()
+                } label: {
+                    HStack {
+                        Text("Cor de destaque")
+                        Spacer()
+                        Circle().fill(selectedAccent.color).frame(width: 18, height: 18)
+                        Text(selectedAccent.title).foregroundStyle(.secondary)
                     }
                 }
                 Toggle("Ocultar valores no resumo e listas", isOn: $hideAmounts)
@@ -47,8 +52,13 @@ struct LedgerSettingsView: View {
             }
             Section {
                 Label("Acesso rápido na Tela de Início", systemImage: "square.grid.2x2")
-                Text("Mantenha uma área vazia da Tela de Início pressionada, toque em Editar e adicione o widget Ledger. Também há controles para a Tela Bloqueada. Os widgets abrem receitas, despesas e Agenda, sem expor valores financeiros.")
+                Text("Adicione o widget Ledger pela edição da Tela de Início para ver saldo, entradas, saídas e próximos pagamentos. Os valores respeitam a opção de ocultação. A atualização ocorre ao usar o app e conforme a disponibilidade do iOS.")
                     .font(.footnote).foregroundStyle(.secondary)
+                Label("Central de Controle", systemImage: "switch.2")
+                Text("No iOS 18 ou posterior, abra a Central de Controle, mantenha pressionado, toque em Adicionar um Controle e procure Ledger. Há controles para nova despesa, nova receita, resumo e Agenda.").font(.footnote).foregroundStyle(.secondary)
+                if !LedgerWidgetStore.isAvailable {
+                    Text("O compartilhamento com widgets não está disponível nesta instalação. A assinatura precisa autorizar o App Group do Ledger.").font(.footnote).foregroundStyle(.orange)
+                }
             } header: { Text("Widgets") }
             Section {
                 Toggle("Lembretes de pagamento", isOn: Binding(get: { enabled }, set: { value in
@@ -102,6 +112,8 @@ struct LedgerSettingsView: View {
             }
         }
         .navigationTitle("Ajustes")
+        .tint(selectedAccent.color)
+        .preferredColorScheme((LedgerAppearance(rawValue: appearance) ?? .system).colorScheme)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Concluir") { dismiss() } } }
         .onAppear { notifications.refresh(context: context) }
@@ -111,5 +123,29 @@ struct LedgerSettingsView: View {
         .onChange(of: minute) { _, _ in notifications.refresh(context: context) }
         .onChange(of: showAmounts) { _, _ in notifications.refresh(context: context) }
         .onChange(of: accent) { _, _ in LedgerThemeState.shared.refresh() }
+        .onChange(of: hideAmounts) { _, _ in WidgetSnapshotService.refresh(context: context) }
+    }
+    private var selectedAccent: LedgerAccent { LedgerAccent(rawValue: accent) ?? .teal }
+}
+
+struct LedgerAccentSettingsView: View {
+    @AppStorage("ledger.accent") private var accent = "teal"
+    var body: some View {
+        List(LedgerAccent.allCases) { value in
+            Button {
+                accent = value.rawValue
+                LedgerThemeState.shared.refresh()
+            } label: {
+                HStack(spacing: 12) {
+                    Circle().fill(value.color).frame(width: 26, height: 26)
+                    Text(value.title).foregroundStyle(.primary)
+                    Spacer()
+                    if accent == value.rawValue { Image(systemName: "checkmark").foregroundStyle(value.color) }
+                }.contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityAddTraits(accent == value.rawValue ? .isSelected : [])
+        }
+        .navigationTitle("Cor de destaque")
+        .navigationBarTitleDisplayMode(.inline)
+        .tint((LedgerAccent(rawValue: accent) ?? .teal).color)
     }
 }

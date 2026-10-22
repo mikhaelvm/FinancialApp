@@ -11,6 +11,7 @@ struct LedgerExportDocument: FileDocument {
 }
 
 struct DataManagementView: View {
+    @State private var importingStatement = false
     @Environment(\.modelContext) private var context
     @State private var exporting = false
     @State private var importing = false
@@ -20,6 +21,8 @@ struct DataManagementView: View {
     @State private var confirming = false
     @State private var message: String?
     @State private var error: String?
+    @State private var confirmingReset = false
+    @State private var resetText = ""
     @AppStorage("ledger.lastBackupExport") private var lastBackupExport = 0.0
     var body: some View {
         Form {
@@ -36,7 +39,7 @@ struct DataManagementView: View {
                 Text("Inclui categorias, cartões, compras, parcelas, faturas pagas, recorrências e contas agendadas. Escolha uma pasta no app Arquivos. A restauração adiciona registros ausentes e mantém os existentes. Preferências do aparelho não são alteradas.")
             }
             Section {
-                NavigationLink { StatementImportView() } label: { Label("Importar extrato bancário", systemImage: "building.columns") }
+                Button("Importar extrato bancário", systemImage: "building.columns") { importingStatement = true }
                 Button("Exportar transações em CSV", systemImage: "tablecells") {
                     do { document = LedgerExportDocument(data: try BackupService.csv(context: context)); exportType = .commaSeparatedText; exporting = true }
                     catch { self.error = error.localizedDescription }
@@ -45,6 +48,12 @@ struct DataManagementView: View {
                 Text("CSV é destinado à análise em planilhas; para restaurar o app, use o backup completo em JSON.")
             }
             if let message { Section { Label(message, systemImage: "checkmark.circle").foregroundStyle(.green) } }
+            Section {
+                Button("Apagar todos os dados e redefinir", role: .destructive) { resetText = ""; confirmingReset = true }
+                    .foregroundStyle(.red)
+            } header: { Text("Redefinir Ledger") } footer: {
+                Text("Remove lançamentos, cartões, pagamentos, recorrências e categorias personalizadas, cancela os lembretes e restaura as preferências. Os arquivos de backup que você exportou não serão apagados.")
+            }
         }
         .navigationTitle("Dados e backup").navigationBarTitleDisplayMode(.inline)
         .fileExporter(isPresented: $exporting, document: document, contentType: exportType,
@@ -74,6 +83,17 @@ struct DataManagementView: View {
             }
         } message: {
             Text("O arquivo tem \(pending?.count ?? 0) registros. Os dados atuais serão mantidos. Cobranças de recorrências ativas serão atualizadas ao voltar ao app.")
+        }
+        .statementImporter(isPresented: $importingStatement)
+        .alert("Apagar todos os dados?", isPresented: $confirmingReset) {
+            TextField("Digite APAGAR", text: $resetText).textInputAutocapitalization(.characters).autocorrectionDisabled()
+            Button("Cancelar", role: .cancel) { }
+            Button("Apagar e redefinir", role: .destructive) {
+                do { try AppResetService.reset(context: context); message = "Ledger restaurado aos padrões." }
+                catch { self.error = error.localizedDescription }
+            }.disabled(resetText != "APAGAR")
+        } message: {
+            Text("Esta ação não pode ser desfeita. Exporte um backup antes se quiser preservar seus registros. Digite APAGAR para confirmar. A permissão de notificações do iOS continua sendo controlada pelos Ajustes do sistema.")
         }
         .financeError($error)
     }

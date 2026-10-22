@@ -10,13 +10,14 @@ enum StatementBank: String, CaseIterable, Identifiable, Sendable {
 struct StatementRow: Identifiable, Sendable {
     let id: String
     let importKey: String
-    let date: Date
+    var date: Date
     var title: String
     var signedCents: Int64
     var categoryID: UUID?
     var selected = true
     var isDuplicate = false
     var importAsNew = false
+    var requiresReview = false
     var kind: TransactionKind { signedCents < 0 ? .expense : .income }
     init(id importKey: String, date: Date, title: String, signedCents: Int64) {
         self.id = UUID().uuidString

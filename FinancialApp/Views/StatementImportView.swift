@@ -5,8 +5,7 @@ import UniformTypeIdentifiers
 struct StatementImportView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Category.name) private var categories: [Category]
-    @State private var bank = StatementBank.itau
-    @State private var account = ""
+    let fileURL: URL
     @State private var choosingFile = false
     @State private var filename = ""
     @State private var csv: StatementCSV?
@@ -26,12 +25,10 @@ struct StatementImportView: View {
     var body: some View {
         List {
             Section {
-                Picker("Banco", selection: $bank) { ForEach(StatementBank.allCases) { Text($0.rawValue).tag($0) } }.disabled(!rows.isEmpty)
-                TextField("Identificação da conta (opcional)", text: $account).disabled(!rows.isEmpty)
-                Button(filename.isEmpty ? "Selecionar extrato OFX ou CSV" : "Escolher outro arquivo", systemImage: "doc.badge.plus") { choosingFile = true }.disabled(isLoading)
+                Button(filename.isEmpty ? "Selecionar extrato OFX, CSV ou PDF" : "Escolher outro arquivo", systemImage: "doc.badge.plus") { choosingFile = true }.disabled(isLoading)
                 if !filename.isEmpty { LabeledContent("Arquivo", value: filename).font(.caption) }
             } footer: {
-                Text("Use o extrato da conta, não a fatura do cartão. Para CSVs de uma mesma conta, mantenha a mesma identificação nos próximos arquivos. A análise é local; o saldo inicial não é importado como receita.")
+                Text("Use o extrato da conta, não a fatura do cartão. A análise ocorre neste aparelho. PDF exige revisão individual; saldo inicial e saldo final não são importados como movimentos.")
             }
             if let csv {
                 Section {
@@ -55,40 +52,13 @@ struct StatementImportView: View {
                     MoneyRow(title: "Despesas selecionadas", cents: expenses, symbol: "minus.circle")
                     LabeledContent("Selecionados", value: "\(selected.count) de \(rows.count)")
                     Button("Selecionar novos lançamentos") {
-                        for index in rows.indices { rows[index].selected = !rows[index].isDuplicate && rows[index].date <= FinanceDate.day(.now) }
+                        for index in rows.indices { rows[index].selected = !rows[index].isDuplicate && !rows[index].requiresReview && rows[index].date <= FinanceDate.day(.now) }
                     }
                     Button("Desmarcar todos") { for index in rows.indices { rows[index].selected = false } }
                 }
                 Section {
                     ForEach($rows) { $row in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Toggle(isOn: $row.selected) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(row.title).font(.subheadline.weight(.medium))
-                                    Text("\(row.kind.title) • \(Money.format(abs(row.signedCents))) • \(row.date.formatted(date: .abbreviated, time: .omitted))")
-                                        .font(.caption).foregroundStyle(row.kind == .income ? .green : .secondary)
-                                }
-                            }.disabled(row.date > FinanceDate.day(.now) || (row.isDuplicate && !row.importAsNew))
-                            if row.isDuplicate { Label("Possível duplicado • desmarcado por padrão", systemImage: "doc.on.doc").font(.caption).foregroundStyle(.orange) }
-                            if row.isDuplicate && row.date <= FinanceDate.day(.now) {
-                                Button(row.importAsNew ? "Cancelar inclusão como novo" : "É outro movimento: importar como novo") {
-                                    row.importAsNew.toggle(); row.selected = row.importAsNew
-                                }.font(.caption)
-                            }
-                            if row.date > FinanceDate.day(.now) { Text("Lançamento futuro: não será importado como realizado.").font(.caption).foregroundStyle(.secondary) }
-                            if row.selected {
-                                Picker("Natureza", selection: Binding(get: { row.kind }, set: { kind in
-                                    row.signedCents = kind == .expense ? -abs(row.signedCents) : abs(row.signedCents)
-                                })) {
-                                    Text("Despesa").tag(TransactionKind.expense)
-                                    Text("Receita").tag(TransactionKind.income)
-                                }.font(.caption)
-                                Picker("Categoria", selection: $row.categoryID) {
-                                    Text("Sem categoria").tag(nil as UUID?)
-                                    ForEach(categories) { Text($0.name).tag(Optional($0.id)) }
-                                }.font(.caption)
-                            }
-                        }.padding(.vertical, 4)
+                        StatementReviewRow(row: $row, categories: categories)
                     }
                 } header: { Text("Lançamentos encontrados") } footer: {
                     Text("Revise descrições, valores, categorias e duplicados. Uma nova importação do mesmo extrato não repete registros com a mesma identificação. Movimentos manuais e pagamentos de faturas já registrados também podem aparecer como possíveis duplicados.")
@@ -109,7 +79,8 @@ struct StatementImportView: View {
         .overlay {
             if isLoading { ProgressView("Analisando extrato…").padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) }
         }
-        .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.commaSeparatedText, .plainText, UTType(filenameExtension: "ofx") ?? .data]) { result in
+        .task(id: fileURL) { await load(fileURL) }
+        .fileImporter(isPresented: $choosingFile, allowedContentTypes: StatementFilePicker.contentTypes) { result in
             do {
                 let url = try result.get()
                 Task { await load(url) }
@@ -138,10 +109,10 @@ struct StatementImportView: View {
     private func analyzeCSV(_ document: StatementCSV) async {
         isLoading = true
         defer { isLoading = false }
-        let configuration = mapping, sourceBank = bank, sourceAccount = account
+        let configuration = mapping
         do {
             let result = try await Task.detached(priority: .userInitiated) {
-                try StatementParser.csv(document, mapping: configuration, bank: sourceBank, account: sourceAccount)
+                try StatementParser.csv(document, mapping: configuration, bank: .other, account: "")
             }.value
             parsedRows = result.rows; warnings = result.warnings
             rows = try StatementImportService.prepare(parsedRows, context: context)
@@ -154,18 +125,19 @@ struct StatementImportView: View {
         defer { isLoading = false }
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        let sourceBank = bank
         do {
-            guard ["ofx", "csv", "txt"].contains(url.pathExtension.lowercased()) else {
-                throw FinanceError.invalid("Escolha um extrato OFX ou CSV. Exporte novamente nesse formato pelo banco.")
+            guard ["ofx", "csv", "txt", "pdf"].contains(url.pathExtension.lowercased()) else {
+                throw FinanceError.invalid("Escolha um extrato OFX, CSV ou PDF.")
             }
             filename = url.lastPathComponent; rows = []; parsedRows = []; warnings = []; csv = nil; message = nil
             let loaded = try await Task.detached(priority: .userInitiated) {
                 if let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > StatementParser.maximumBytes {
                     throw FinanceError.invalid("O extrato deve ter até 15 MB.")
                 }
-                let text = try StatementParser.text(from: Data(contentsOf: url, options: .mappedIfSafe))
-                if text.localizedCaseInsensitiveContains("<OFX") { return LoadedStatement.ofx(try StatementParser.ofx(text, bank: sourceBank)) }
+                let data = try Data(contentsOf: url, options: .mappedIfSafe)
+                if url.pathExtension.lowercased() == "pdf" { return LoadedStatement.ofx(try PDFStatementReader.read(data)) }
+                let text = try StatementParser.text(from: data)
+                if text.localizedCaseInsensitiveContains("<OFX") { return LoadedStatement.ofx(try StatementParser.ofx(text, bank: .other)) }
                 return LoadedStatement.csv(try StatementParser.csvDocument(text))
             }.value
             switch loaded {
@@ -183,4 +155,98 @@ struct StatementImportView: View {
 private enum LoadedStatement: Sendable {
     case ofx(StatementParseResult)
     case csv(StatementCSV)
+}
+
+
+/// Opens Files immediately. The review sheet is presented only after a file is chosen.
+private struct SelectedStatementFile: Identifiable { let url: URL; var id: URL { url } }
+struct StatementFilePicker: ViewModifier {
+    @Binding var isPresented: Bool
+    @State private var selected: SelectedStatementFile?
+    @State private var error: String?
+    static var contentTypes: [UTType] { [.pdf, .commaSeparatedText, .plainText, UTType(filenameExtension: "ofx") ?? .data] }
+    func body(content: Content) -> some View {
+        content
+            .fileImporter(isPresented: $isPresented, allowedContentTypes: Self.contentTypes) { result in
+                do { selected = SelectedStatementFile(url: try result.get()) }
+                catch { if (error as NSError).code != NSUserCancelledError { self.error = error.localizedDescription } }
+            }
+            .sheet(item: $selected) { file in
+                NavigationStack {
+                    StatementImportView(fileURL: file.url)
+                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Concluir") { selected = nil } } }
+                }
+            }
+            .financeError($error)
+    }
+}
+extension View {
+    func statementImporter(isPresented: Binding<Bool>) -> some View { modifier(StatementFilePicker(isPresented: isPresented)) }
+}
+
+
+private struct StatementReviewRow: View {
+    @Binding var row: StatementRow
+    let categories: [Category]
+    @State private var amountText = ""
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if row.requiresReview {
+                Label("PDF: confira antes de selecionar", systemImage: "doc.text.viewfinder").font(.caption).foregroundStyle(.orange)
+                TextField("Descrição", text: $row.title)
+                DatePicker("Data", selection: $row.date, in: ...Date.now, displayedComponents: .date)
+                TextField("Valor em reais", text: $amountText).keyboardType(.decimalPad)
+                Picker("Natureza", selection: Binding(get: { row.kind }, set: { kind in
+                    row.signedCents = kind == .expense ? -abs(row.signedCents) : abs(row.signedCents)
+                })) {
+                    Text("Despesa").tag(TransactionKind.expense)
+                    Text("Receita").tag(TransactionKind.income)
+                }.pickerStyle(.segmented)
+            }
+            Toggle(isOn: $row.selected) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(row.title).font(.subheadline.weight(.medium))
+                    Text("\(row.kind.title) • \(Money.format(abs(row.signedCents))) • \(row.date.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption).foregroundStyle(row.kind == .income ? .green : .secondary)
+                }
+            }.disabled(!canSelect)
+            if row.isDuplicate { Label("Possível duplicado • desmarcado por padrão", systemImage: "doc.on.doc").font(.caption).foregroundStyle(.orange) }
+            if row.isDuplicate && row.date <= FinanceDate.day(.now) {
+                Button(row.importAsNew ? "Cancelar inclusão como novo" : "É outro movimento: importar como novo") {
+                    row.importAsNew.toggle(); row.selected = row.importAsNew && canSelect
+                }.font(.caption)
+            }
+            if row.date > FinanceDate.day(.now) { Text("Lançamento futuro: não será importado como realizado.").font(.caption).foregroundStyle(.secondary) }
+            if row.selected {
+                if !row.requiresReview {
+                Picker("Natureza", selection: Binding(get: { row.kind }, set: { kind in
+                    row.signedCents = kind == .expense ? -abs(row.signedCents) : abs(row.signedCents)
+                })) {
+                    Text("Despesa").tag(TransactionKind.expense)
+                    Text("Receita").tag(TransactionKind.income)
+                }.font(.caption)
+                }
+                Picker("Categoria", selection: $row.categoryID) {
+                    Text("Sem categoria").tag(nil as UUID?)
+                    ForEach(categories) { Text($0.name).tag(Optional($0.id)) }
+                }.font(.caption)
+            }
+        }.padding(.vertical, 4)
+        .onAppear { amountText = Money.input(abs(row.signedCents)) }
+        .onChange(of: amountText) { _, text in
+            if let cents = Money.parse(text) { row.signedCents = row.kind == .expense ? -cents : cents }
+            else if row.requiresReview { row.selected = false }
+        }
+        .onChange(of: row.signedCents) { _, cents in
+            if Money.parse(amountText) != abs(cents) { amountText = Money.input(abs(cents)) }
+        }
+        .onChange(of: row.title) { _, title in
+            if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { row.selected = false }
+        }
+    }
+    private var canSelect: Bool {
+        row.date <= FinanceDate.day(.now) && (!row.isDuplicate || row.importAsNew)
+            && !row.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (!row.requiresReview || Money.parse(amountText) != nil)
+    }
 }

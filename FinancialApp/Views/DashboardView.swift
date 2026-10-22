@@ -3,6 +3,7 @@ import SwiftData
 import Charts
 
 struct DashboardView: View {
+    @Environment(\.modelContext) private var context
     @Query private var transactions: [Transaction]
     @Query private var cards: [CreditCard]
     @Query private var subscriptions: [Subscription]
@@ -91,8 +92,10 @@ struct DashboardView: View {
                         SectorMark(angle: .value("Valor", Double(item.cents) / 100), innerRadius: .ratio(0.7), angularInset: 2)
                             .foregroundStyle(by: .value("Categoria", item.name))
                             .accessibilityLabel(item.name).accessibilityValue(Money.format(item.cents))
-                    }.frame(height: 200).padding(.vertical, 8)
-                    ForEach(snapshot.categories) { item in MoneyRow(title: item.name, cents: item.cents) }
+                    }
+                    .chartForegroundStyleScale(domain: snapshot.categories.map(\.name), range: snapshot.categories.map(\.color))
+                    .frame(height: 200).padding(.vertical, 8)
+                    ForEach(snapshot.categories) { item in CategoryExpenseRow(item: item) }
                 }
             }
             Section {
@@ -124,6 +127,7 @@ struct DashboardView: View {
         }
         .sheet(item: $entry) { action in AddTransactionView(initialMode: action.mode, initialKind: action.kind) }
         .sheet(isPresented: $showSettings) { NavigationStack { LedgerSettingsView() } }
+        .onChange(of: hideAmounts) { _, _ in WidgetSnapshotService.refresh(context: context) }
     }
 }
 

@@ -37,7 +37,14 @@ final class ScheduledPaymentViewModel {
         do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 
-    func delete(_ payment: ScheduledPayment, context: ModelContext) throws {
+    func delete(_ payment: ScheduledPayment, context: ModelContext, removeRecordedExpense: Bool = false) throws {
+        if removeRecordedExpense, let id = payment.paidTransactionID,
+           let transaction = try context.fetch(FetchDescriptor<Transaction>()).first(where: { $0.id == id }) {
+            guard transaction.card == nil, transaction.kind == .expense else {
+                throw FinanceError.invalid("O vínculo deste pagamento não corresponde a uma despesa na conta. Exclua somente o agendamento e revise o extrato.")
+            }
+            context.delete(transaction)
+        }
         context.delete(payment)
         do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }

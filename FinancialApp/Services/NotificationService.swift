@@ -13,6 +13,15 @@ final class NotificationService {
     private var work: Task<Void, Never>?
     private var pendingContext: ModelContext?
     private let center = UNUserNotificationCenter.current()
+    private var resetRevision = 0
+
+    func reset(context: ModelContext) {
+        resetRevision += 1
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
+        scheduledCount = 0; coveredUntil = nil; lastError = nil
+        refresh(context: context)
+    }
 
     var canNotify: Bool { authorization == .authorized || authorization == .provisional || authorization == .ephemeral }
 
@@ -42,9 +51,11 @@ final class NotificationService {
     }
 
     private func reconcile(context: ModelContext) async {
+        let revision = resetRevision
         authorization = await center.notificationSettings().authorizationStatus
         let preferences = ReminderPreferences.current
         let pending = await center.pendingNotificationRequests()
+        guard revision == resetRevision else { return }
         let ownedIDs = pending.map(\.identifier).filter { $0.hasPrefix("ledger.payment.") }
         guard preferences.enabled && canNotify else {
             center.removePendingNotificationRequests(withIdentifiers: ownedIDs)
@@ -64,6 +75,7 @@ final class NotificationService {
             let existing = Dictionary(pending.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
             var completed = 0
             for reminder in reminders {
+                guard revision == resetRevision else { return }
                 let content = UNMutableNotificationContent()
                 content.title = reminder.commitment.title
                 let when = reminder.daysBefore == 0 ? "hoje" : (reminder.daysBefore == 1 ? "amanhã" : "em \(reminder.daysBefore) dias")
@@ -80,6 +92,10 @@ final class NotificationService {
                 let sameDate = (old?.trigger as? UNCalendarNotificationTrigger)?.dateComponents == components
                 if old?.content.title != content.title || old?.content.body != content.body || !sameDate {
                     try await center.add(UNNotificationRequest(identifier: reminder.id, content: content, trigger: trigger))
+                    if revision != resetRevision {
+                        center.removePendingNotificationRequests(withIdentifiers: [reminder.id])
+                        return
+                    }
                 }
                 completed += 1
             }
@@ -87,6 +103,7 @@ final class NotificationService {
             coveredUntil = reminders.last?.fireDate
             lastError = nil
         } catch {
+            guard revision == resetRevision else { return }
             lastError = "Não foi possível atualizar os lembretes: \(error.localizedDescription)"
         }
     }
