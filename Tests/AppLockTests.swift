@@ -50,6 +50,18 @@ final class AppLockTests: XCTestCase {
         XCTAssertTrue(AppLockService(defaults: defaults, authentication: auth).isLocked)
     }
 
+    func testColdLaunchUsesPersistedProtectionWithoutRequestingAuthenticationInInit() throws {
+        for enabled in [false, true] {
+            let (lock, auth, defaults, name) = try fixture(enabled: enabled)
+            defer { defaults.removePersistentDomain(forName: name) }
+            XCTAssertEqual(lock.isEnabled, enabled)
+            XCTAssertEqual(lock.isLocked, enabled)
+            XCTAssertEqual(auth.requests, 0)
+            if enabled { XCTAssertThrowsError(try lock.requireUnlockedAccess()) }
+            else { XCTAssertNoThrow(try lock.requireUnlockedAccess()) }
+        }
+    }
+
     func testDisablingRequiresAuthenticationAndCancellationKeepsLock() async throws {
         let (lock, auth, defaults, name) = try fixture(enabled: true)
         defer { defaults.removePersistentDomain(forName: name) }

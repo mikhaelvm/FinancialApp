@@ -61,8 +61,9 @@ final class AppLockService {
     init(defaults: UserDefaults = .standard, authentication: (any DeviceAuthenticating)? = nil) {
         self.defaults = defaults
         self.authentication = authentication ?? SystemDeviceAuthentication()
-        isEnabled = defaults.bool(forKey: Self.enabledKey)
-        isLocked = isEnabled
+        let enabled = defaults.bool(forKey: Self.enabledKey)
+        isEnabled = enabled
+        isLocked = enabled
     }
 
     @discardableResult func setEnabled(_ enabled: Bool) async -> Bool {
