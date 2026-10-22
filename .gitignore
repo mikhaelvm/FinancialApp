@@ -1,0 +1,9 @@
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+build/
+*.xcarchive
+*.ipa
+.DS_Store
+.swiftpm/
+FinancialApp-source.zip

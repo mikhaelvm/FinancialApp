@@ -1,0 +1,100 @@
+name: Build unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcodegen --version
+
+      - name: Generate project
+        run: xcodegen generate --spec project.yml
+
+      - name: Select available iPhone simulator
+        run: |
+          set -euo pipefail
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          inventory = json.load(sys.stdin)["devices"]
+          devices = [d for runtime, items in inventory.items() if "iOS" in runtime for d in items if d.get("isAvailable") and "iPhone" in d["name"]]
+          if not devices:
+              raise SystemExit("No available iPhone simulator")
+          print(devices[0]["udid"])
+          ')
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+
+      - name: Test business rules and persistence
+        run: |
+          set -euo pipefail
+          xcodebuild test \
+            -project FinancialApp.xcodeproj \
+            -scheme FinancialApp \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -parallel-testing-enabled NO \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="-"
+
+      - name: Archive unsigned device application
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project FinancialApp.xcodeproj \
+            -scheme FinancialApp \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$PWD/build/FinancialApp.xcarchive" \
+            -derivedDataPath "$PWD/build/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          set -euo pipefail
+          APP="$PWD/build/FinancialApp.xcarchive/Products/Applications/FinancialApp.app"
+          test -d "$APP"
+          test -f "$APP/FinancialApp"
+          mkdir -p build/package/Payload
+          ditto "$APP" build/package/Payload/FinancialApp.app
+          cd build/package
+          zip -qry ../FinancialApp.ipa Payload
+          unzip -t ../FinancialApp.ipa
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: FinancialApp-unsigned
+          path: build/FinancialApp.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-TestResults
+          path: build/TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 7
