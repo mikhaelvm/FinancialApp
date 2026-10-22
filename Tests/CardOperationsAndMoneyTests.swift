@@ -1,4 +1,6 @@
 import XCTest
+import SwiftUI
+import UIKit
 import SwiftData
 @testable import FinancialApp
 @testable import class FinancialApp.Category
@@ -17,6 +19,22 @@ final class CardOperationsAndMoneyTests: XCTestCase {
         DashboardViewModel().snapshot(transactions: try context.fetch(FetchDescriptor<Transaction>()),
             cards: try context.fetch(FetchDescriptor<CreditCard>()), subscriptions: [],
             payments: try context.fetch(FetchDescriptor<InvoicePayment>()), month: .now).balance
+    }
+
+    func testCurrencyEditorFormatsEveryKeystrokeBeforeKeyboardDismissal() {
+        var value = ""
+        let binding = Binding<String>(get: { value }, set: { value = $0 })
+        let coordinator = CurrencyTextField.Coordinator(CurrencyTextField(text: binding))
+        let field = UITextField()
+        for (digit, expected) in zip(["3", "2", "9", "9", "8", "0"], ["0,03", "0,32", "3,29", "32,99", "329,98", "3.299,80"]) {
+            let end = (field.text ?? "").utf16.count
+            XCTAssertFalse(coordinator.textField(field, shouldChangeCharactersIn: NSRange(location: end, length: 0), replacementString: digit))
+            XCTAssertEqual(field.text, expected)
+            XCTAssertEqual(value, expected)
+        }
+        XCTAssertFalse(coordinator.textField(field, shouldChangeCharactersIn: NSRange(location: 7, length: 1), replacementString: ""))
+        XCTAssertEqual(field.text, "329,98")
+        XCTAssertEqual(value, "329,98")
     }
 
     func testBankStyleDigitsFormattingDeletionAndPasting() {

@@ -4,6 +4,8 @@ Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações l
 
 ## Versão 1.5.0
 
+- Agenda permite dispensar contas agendadas e faturas por vencimento, sem pagamento ou débito. Arraste ou mantenha pressionado para dispensar; a seção Dispensados permite reativar. Dispensas são locais, incluídas no backup JSON e removidas na redefinição. Compras, limite e histórico das faturas não são alterados. Recorrências automáticas devem ser pausadas em Recorrentes.
+
 - Quatro abas: Resumo, Extrato, Cartões e Pagamentos. Agenda e Recorrentes ficam juntas em Pagamentos, com um seletor; links e lembretes anteriores continuam funcionando.
 - Entrada monetária em centavos com formatação automática: digitar 123456 mostra 1.234,56, sem precisar inserir vírgula.
 - Compras do cartão em seção própria, com todas as compras ou apenas a fatura selecionada. O detalhe mostra parcelas e permite excluir a compra inteira.
@@ -220,7 +222,7 @@ Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **69 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **72 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 

@@ -93,8 +93,7 @@ struct CardFormView: View {
                         Text("Limite total").font(.caption).foregroundStyle(.secondary)
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("R$").foregroundStyle(.secondary)
-                            TextField("0,00", text: $limit.bankCurrency).keyboardType(.numberPad)
-                                .focused($focusedField, equals: .limit).monospacedDigit()
+                            CurrencyTextField(text: $limit, textStyle: .title2, focus: Binding(get: { focusedField == .limit }, set: { focusedField = $0 ? .limit : nil }))
                                 .accessibilityLabel("Limite total em reais")
                         }.font(.title2)
                     }.padding(.vertical, 6)

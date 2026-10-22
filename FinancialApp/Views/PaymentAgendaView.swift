@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 private enum AgendaFilter: String, CaseIterable, Identifiable {
-    case upcoming = "A vencer", overdue = "Atrasados", paid = "Pagos"
+    case upcoming = "A vencer", overdue = "Atrasados", paid = "Pagos", dismissed = "Dispensados"
     var id: String { rawValue }
 }
 
@@ -18,13 +18,17 @@ struct PaymentAgendaView: View {
     @State private var editing: ScheduledPayment?
     @State private var confirming: ScheduledPayment?
     @State private var deleting: ScheduledPayment?
+    @State private var dismissing: PaymentCommitment?
+    @AppStorage("ledger.dismissedPayments") private var dismissedIDs = ""
     @State private var error: String?
 
-    private var commitments: [PaymentCommitment] {
+    private var allCommitments: [PaymentCommitment] {
         let horizon = FinanceDate.calendar.date(byAdding: .day, value: 60, to: FinanceDate.day(.now))!
         return PaymentPlanner().commitments(cards: cards, subscriptions: subscriptions,
-                                            scheduled: scheduled, through: horizon)
+                                            scheduled: scheduled, through: horizon, includeDismissed: true)
     }
+    private var dismissedSet: Set<String> { Set(dismissedIDs.split(separator: "\n").map(String.init)) }
+    private var commitments: [PaymentCommitment] { allCommitments.filter { !dismissedSet.contains($0.id) } }
     private var filtered: [PaymentCommitment] {
         PaymentPlanner.agendaItems(commitments).filter { filter == .overdue ? $0.isOverdue() : !$0.isOverdue() }
     }
@@ -49,7 +53,20 @@ struct PaymentAgendaView: View {
                     ForEach(AgendaFilter.allCases) { Text($0.rawValue).tag($0) }
                 }.pickerStyle(.segmented)
             }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
-            if filter == .paid {
+            if filter == .dismissed {
+                Section("Sem efeito no saldo") {
+                    let items = allCommitments.filter { dismissedSet.contains($0.id) }
+                    if items.isEmpty { Text("Nenhum compromisso dispensado.").foregroundStyle(.secondary) }
+                    ForEach(items) { item in
+                        VStack(alignment: .leading, spacing: 8) {
+                            PaymentCommitmentRow(item: item)
+                            Button("Voltar à Agenda", systemImage: "arrow.uturn.backward") {
+                                PaymentDismissalStore.set(item.id, dismissed: false)
+                            }
+                        }
+                    }
+                }
+            } else if filter == .paid {
                 Section("Contas concluídas") {
                     if !scheduled.contains(where: \.isPaid) {
                         ContentUnavailableView("Tudo em seu tempo", systemImage: "checkmark.circle",
@@ -85,7 +102,15 @@ struct PaymentAgendaView: View {
                     Section(dateTitle(date)) {
                         ForEach(filtered.filter { $0.dueDate == date }) { item in
                             Button { open(item) } label: { PaymentCommitmentRow(item: item) }.buttonStyle(.plain)
-                                .swipeActions {
+                                .contextMenu {
+                                    if item.kind != .subscription {
+                                        Button("Dispensar", systemImage: "minus.circle") { dismissing = item }
+                                    }
+                                }
+                                .swipeActions(allowsFullSwipe: false) {
+                                    if item.kind != .subscription {
+                                        Button("Dispensar", systemImage: "minus.circle") { dismissing = item }.tint(.gray)
+                                    }
                                     if item.kind == .scheduled, let payment = scheduled.first(where: { $0.id == item.sourceID }) {
                                         Button("Pago", systemImage: "checkmark") { confirming = payment }.tint(LedgerTheme.accent)
                                         Button("Excluir", role: .destructive) { deleting = payment }.tint(.red)
@@ -107,6 +132,14 @@ struct PaymentAgendaView: View {
         .sheet(isPresented: $showAdd) { ScheduledPaymentForm() }
         .sheet(item: $editing) { ScheduledPaymentForm(payment: $0) }
         .sheet(isPresented: $showSettings) { NavigationStack { LedgerSettingsView() } }
+        .confirmationDialog("Dispensar este compromisso?", isPresented: Binding(get: { dismissing != nil }, set: { if !$0 { dismissing = nil } }), titleVisibility: .visible) {
+            Button("Dispensar sem registrar pagamento") {
+                if let dismissing { PaymentDismissalStore.set(dismissing.id, dismissed: true) }
+                dismissing = nil
+            }
+        } message: {
+            Text("Sai da Agenda e dos lembretes, sem descontar do saldo ou registrar pagamento. Compras, limite do cartão e histórico da fatura permanecem. Você pode reativá-lo em Dispensados. Somente este vencimento será dispensado.")
+        }
         .confirmationDialog("Confirmar pagamento?", isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }), titleVisibility: .visible) {
             Button("Registrar pagamento") {
                 if let confirming { perform { try ScheduledPaymentViewModel().pay(confirming, context: context) } }
@@ -168,7 +201,7 @@ struct ScheduledPaymentForm: View {
                         .submitLabel(.done).onSubmit { focusedField = nil }
                     HStack {
                         Text("R$").foregroundStyle(.secondary)
-                        TextField("0,00", text: $amount.bankCurrency).keyboardType(.numberPad).focused($focusedField, equals: .amount).accessibilityLabel("Valor em reais")
+                        CurrencyTextField(text: $amount, focus: Binding(get: { focusedField == .amount }, set: { focusedField = $0 ? .amount : nil })).accessibilityLabel("Valor em reais")
                     }
                     DatePicker("Vencimento", selection: $dueDate, displayedComponents: .date)
                     Picker("Categoria", selection: $categoryID) {

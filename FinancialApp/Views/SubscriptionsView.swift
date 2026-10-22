@@ -11,7 +11,6 @@ struct SubscriptionsView: View {
     @State private var deleting: Subscription?
     @State private var error: String?
     @State private var showActive = true
-    @State private var search = ""
 
     private var monthlyCents: Int64 {
         Int64(subscriptions.filter(\.isActive).reduce(0.0) { $0 + $1.monthlyEquivalentCents }.rounded())
@@ -56,7 +55,7 @@ struct SubscriptionsView: View {
                 }
             }
             Section {
-                ForEach(subscriptions.filter { $0.isActive == showActive && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)) }) { subscription in
+                ForEach(subscriptions.filter { $0.isActive == showActive }) { subscription in
                     VStack(alignment: .leading, spacing: 8) {
                         Button { editing = subscription } label: {
                             HStack(alignment: .top, spacing: 12) {
@@ -93,7 +92,6 @@ struct SubscriptionsView: View {
             }
         }
         .ledgerListScreen("Pagamentos")
-        .searchable(text: $search, prompt: "Buscar serviço ou conta")
         .toolbar { LedgerToolbarButton("Adicionar assinatura", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { AddTransactionView(initialMode: .subscription) }
         .sheet(item: $editing) { AddTransactionView(subscription: $0) }

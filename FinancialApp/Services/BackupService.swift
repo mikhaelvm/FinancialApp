@@ -10,6 +10,7 @@ struct LedgerBackup: Codable {
     let transactions: [TransactionRecord]
     let payments: [PaymentRecord]
     let scheduled: [ScheduledRecord]
+    var dismissedPayments: [String]? = nil
     var count: Int { categories.count + cards.count + subscriptions.count + transactions.count + payments.count + scheduled.count }
 
     struct CategoryRecord: Codable { let id: UUID; let name, symbol, colorName: String }
@@ -50,6 +51,7 @@ struct LedgerBackup: Codable {
         func unique(_ ids: [UUID]) -> Bool { Set(ids).count == ids.count }
         guard formatVersion == 1 else { throw FinanceError.invalid("Versão de backup incompatível. Atualize o Ledger.") }
         try check(count <= 100_000)
+        try check((dismissedPayments?.count ?? 0) <= 100_000 && (dismissedPayments ?? []).allSatisfy { $0.count <= 250 && !$0.contains("\n") })
         for ids in [categories.map(\.id), cards.map(\.id), subscriptions.map(\.id), transactions.map(\.id), payments.map(\.id), scheduled.map(\.id)] { try check(unique(ids)) }
         try check(Set(categories.map { $0.name.lowercased() }).count == categories.count)
         let categoryIDs = Set(categories.map(\.id)), cardIDs = Set(cards.map(\.id))
@@ -89,7 +91,8 @@ enum BackupService {
             subscriptions: try context.fetch(FetchDescriptor<Subscription>()).map { .init(id: $0.id, scheduleID: $0.scheduleID, title: $0.title, cycleRaw: $0.cycleRaw, amountCents: $0.amountCents, anchorDate: $0.anchorDate, nextRenewalDate: $0.nextRenewalDate, nextOccurrenceIndex: $0.nextOccurrenceIndex, isActive: $0.isActive, categoryID: $0.category?.id, cardID: $0.card?.id) },
             transactions: try context.fetch(FetchDescriptor<Transaction>()).map { .init(id: $0.id, purchaseID: $0.purchaseID, title: $0.title, kindRaw: $0.kindRaw, amountCents: $0.amountCents, date: $0.date, dueDate: $0.invoiceDueDate, closingDate: $0.invoiceClosingDate, installmentNumber: $0.installmentNumber, totalInstallments: $0.totalInstallments, recurrenceKey: $0.recurrenceKey, categoryID: $0.category?.id, cardID: $0.card?.id, subscriptionID: $0.subscription?.id) },
             payments: try context.fetch(FetchDescriptor<InvoicePayment>()).map { .init(id: $0.id, cardID: $0.card?.id, dueDate: $0.invoiceDueDate, date: $0.date, amountCents: $0.amountCents) },
-            scheduled: try context.fetch(FetchDescriptor<ScheduledPayment>()).map { .init(id: $0.id, title: $0.title, notes: $0.notes, amountCents: $0.amountCents, dueDate: $0.dueDate, categoryID: $0.categoryID, paidTransactionID: $0.paidTransactionID, isPaid: $0.isPaid) })
+            scheduled: try context.fetch(FetchDescriptor<ScheduledPayment>()).map { .init(id: $0.id, title: $0.title, notes: $0.notes, amountCents: $0.amountCents, dueDate: $0.dueDate, categoryID: $0.categoryID, paidTransactionID: $0.paidTransactionID, isPaid: $0.isPaid) },
+            dismissedPayments: PaymentDismissalStore.ids().sorted())
     }
 
     static func encode(_ backup: LedgerBackup) throws -> Data {
@@ -165,7 +168,7 @@ enum BackupService {
             model.id = row.id; model.isPaid = row.isPaid; model.paidTransactionID = row.paidTransactionID.flatMap { transactionMap[$0] }
             context.insert(model); inserted += 1
         }
-        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
+        do { try context.save(); PaymentDismissalStore.merge(backup.dismissedPayments ?? []); FinanceEvents.saved() } catch { context.rollback(); throw error }
         return inserted
     }
 

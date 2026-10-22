@@ -28,6 +28,35 @@ final class LedgerPlanningTests: XCTestCase {
         XCTAssertTrue(PaymentPlanner.agendaItems(paidNext, today: date(22)).contains { $0.id == "later" })
     }
 
+    func testDismissalPersistsAndRestoresWithoutCreatingFinancialRecords() throws {
+        let name = "ledger.test.dismissal." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let id = "invoice:" + UUID().uuidString + ":123"
+        PaymentDismissalStore.set(id, dismissed: true, defaults: defaults)
+        XCTAssertTrue(PaymentDismissalStore.ids(defaults: defaults).contains(id))
+        XCTAssertTrue(PaymentDismissalStore.ids(defaults: try XCTUnwrap(UserDefaults(suiteName: name))).contains(id))
+        PaymentDismissalStore.set(id, dismissed: false, defaults: defaults)
+        XCTAssertFalse(PaymentDismissalStore.ids(defaults: defaults).contains(id))
+    }
+
+    func testDismissedScheduledPaymentDoesNotBecomePaidOrDebitBalance() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let bill = ScheduledPayment(title: "Anterior", amountCents: 10000, dueDate: date(10))
+        context.insert(bill); try context.save()
+        let id = "scheduled:\(bill.id)"
+        defer { PaymentDismissalStore.set(id, dismissed: false) }
+        PaymentDismissalStore.set(id, dismissed: true)
+        let planner = PaymentPlanner()
+        XCTAssertTrue(planner.commitments(cards: [], subscriptions: [], scheduled: [bill], through: date(30), today: date(22)).isEmpty)
+        XCTAssertEqual(planner.commitments(cards: [], subscriptions: [], scheduled: [bill], through: date(30), today: date(22), includeDismissed: true).count, 1)
+        XCTAssertFalse(bill.isPaid)
+        XCTAssertNil(bill.paidTransactionID)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 0)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<InvoicePayment>()), 0)
+    }
+
     func testReminderIncludesAdvanceAndDueDayAtChosenHour() {
         let preferences = ReminderPreferences(enabled: true, daysBefore: 3, hour: 10, minute: 30)
         let reminders = ReminderPlanner().reminders(for: [item(due: date(25))], preferences: preferences, now: date(21))

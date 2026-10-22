@@ -1,12 +1,5 @@
 import SwiftUI
 
-extension Binding where Value == String {
-    var bankCurrency: Binding<String> {
-        Binding(get: { Money.bankInput(wrappedValue, previous: wrappedValue) },
-                set: { wrappedValue = Money.bankInput($0, previous: wrappedValue) })
-    }
-}
-
 /// Icon-only presentation with a meaningful VoiceOver label.
 struct LedgerToolbarButton: View {
     let title: String

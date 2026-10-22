@@ -46,7 +46,7 @@ struct PaymentPlanner {
 
     func commitments(cards: [CreditCard], subscriptions: [Subscription],
                      scheduled: [ScheduledPayment], through horizon: Date,
-                     today: Date = .now) -> [PaymentCommitment] {
+                     today: Date = .now, includeDismissed: Bool = false) -> [PaymentCommitment] {
         var result: [PaymentCommitment] = []
         for card in cards {
             for invoice in InvoiceEngine().invoices(for: card, subscriptions: subscriptions, through: horizon, today: today)
@@ -84,7 +84,8 @@ struct PaymentPlanner {
         }
         // Invoice and card renewal are separate events: renewal charges the card; invoice debits the account.
         var seen = Set<String>()
-        return result.filter { seen.insert($0.id).inserted }.sorted {
+        let dismissed = includeDismissed ? Set<String>() : PaymentDismissalStore.ids()
+        return result.filter { !dismissed.contains($0.id) && seen.insert($0.id).inserted }.sorted {
             $0.dueDate == $1.dueDate ? $0.id < $1.id : $0.dueDate < $1.dueDate
         }
     }

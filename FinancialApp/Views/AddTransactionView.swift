@@ -54,9 +54,7 @@ struct AddTransactionView: View {
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("R$").font(.title2).foregroundStyle(.secondary)
-                        TextField("0,00", text: $amount.bankCurrency)
-                            .font(.system(.largeTitle, design: .rounded).weight(.medium)).monospacedDigit()
-                            .keyboardType(.numberPad).focused($focusedField, equals: .amount)
+                        CurrencyTextField(text: $amount, textStyle: .largeTitle, focus: Binding(get: { focusedField == .amount }, set: { focusedField = $0 ? .amount : nil }))
                             .accessibilityLabel(mode == .installment ? "Valor total da compra" : "Valor em reais")
                     }.padding(.vertical, 8)
                     Text(kind == .income ? "Dinheiro que você recebeu." : (mode == .installment ? "Informe o valor total da compra, antes de parcelar." : "Dinheiro que você gastou ou vai pagar."))
