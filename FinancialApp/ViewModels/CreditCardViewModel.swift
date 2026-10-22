@@ -22,7 +22,7 @@ final class CreditCardViewModel {
         } else {
             context.insert(CreditCard(name: title, limitCents: limit, closingDay: closingDay, dueDay: dueDay))
         }
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 
     func purchase(context: ModelContext, title: String, amountCents: Int64, date: Date,
@@ -42,7 +42,7 @@ final class CreditCardViewModel {
                                        purchaseID: purchaseID, invoiceDueDate: dates.due,
                                        invoiceClosingDate: dates.closing))
         }
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 
     func pay(context: ModelContext, card: CreditCard, invoice: Invoice) throws {
@@ -54,7 +54,7 @@ final class CreditCardViewModel {
         }
         context.insert(InvoicePayment(card: card, invoiceDueDate: current.dueDate,
                                       date: .now, amountCents: current.payableCents))
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 
     func delete(context: ModelContext, card: CreditCard) throws {
@@ -62,6 +62,6 @@ final class CreditCardViewModel {
             throw FinanceError.invalid("Cartões com lançamentos ou assinaturas devem ser mantidos para preservar o histórico.")
         }
         context.delete(card)
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 }

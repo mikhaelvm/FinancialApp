@@ -28,6 +28,9 @@ struct CreditCardDetailView: View {
         let selected = selectedInvoice(in: invoices)
         List {
             Section("Limite") {
+                LedgerSummaryHeader(eyebrow: card.name, title: Money.format(card.availableLimitCents),
+                                    subtitle: "disponíveis de \(Money.format(card.limitCents))", symbol: "creditcard.fill")
+                    .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
                 MoneyRow(title: "Total", cents: card.limitCents, symbol: "creditcard")
                 MoneyRow(title: "Comprometido", cents: card.usedLimitCents, symbol: "lock", tint: .orange)
                 MoneyRow(title: "Disponível", cents: card.availableLimitCents, symbol: "checkmark.circle", tint: .green)

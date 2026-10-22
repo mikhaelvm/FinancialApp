@@ -9,6 +9,8 @@ struct SubscriptionsView: View {
     @State private var editing: Subscription?
     @State private var deleting: Subscription?
     @State private var error: String?
+    @State private var showActive = true
+    @State private var search = ""
 
     private var monthlyCents: Int64 {
         Int64(subscriptions.filter(\.isActive).reduce(0.0) { $0 + $1.monthlyEquivalentCents }.rounded())
@@ -22,10 +24,16 @@ struct SubscriptionsView: View {
     var body: some View {
         List {
             Section {
-                MoneyRow(title: "Compromisso mensal", cents: monthlyCents, symbol: "repeat", tint: .blue)
-                Text("Semanais × 52 ÷ 12 e anuais ÷ 12. O valor efetivo de cada mês depende das datas de cobrança.")
-                    .font(.caption).foregroundStyle(.secondary)
+                LedgerSummaryHeader(eyebrow: "Seu compromisso mensal fixo", title: Money.format(monthlyCents),
+                                    subtitle: "\(subscriptions.filter(\.isActive).count) recorrências ativas • média mensal", symbol: "repeat")
+                    .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             }
+            Section {
+                Picker("Situação", selection: $showActive) {
+                    Text("Ativas").tag(true)
+                    Text("Pausadas").tag(false)
+                }.pickerStyle(.segmented)
+            }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
             if subscriptions.isEmpty {
                 ContentUnavailableView("Suas assinaturas", systemImage: "repeat.circle",
                                        description: Text("Acompanhe serviços e despesas recorrentes em um só lugar."))
@@ -45,35 +53,46 @@ struct SubscriptionsView: View {
                     }
                 }
             }
-            Section("Serviços e recorrências") {
-                ForEach(subscriptions) { subscription in
+            Section {
+                ForEach(subscriptions.filter { $0.isActive == showActive && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search)) }) { subscription in
                     VStack(alignment: .leading, spacing: 8) {
                         Button { editing = subscription } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                MoneyRow(title: subscription.title, cents: subscription.amountCents, symbol: "repeat")
-                                CategoryLabel(category: subscription.category).font(.caption)
-                                Text("\(subscription.cycle.title) • \(subscription.card?.name ?? "Débito / conta")")
-                                    .font(.caption).foregroundStyle(.secondary)
-                                if subscription.isActive {
-                                    Text("Próxima: \(subscription.nextRenewalDate.formatted(date: .abbreviated, time: .omitted))")
-                                        .font(.caption).foregroundStyle(isSoon(subscription) ? .orange : .secondary)
+                            HStack(alignment: .top, spacing: 12) {
+                                SymbolTile(symbol: subscription.category?.symbol ?? "repeat", tint: subscription.category?.color ?? LedgerTheme.accent)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(subscription.title).font(.headline)
+                                    CategoryLabel(category: subscription.category).font(.caption)
+                                    Text(subscription.card?.name ?? "Débito / conta")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    if subscription.isActive {
+                                        Text("Próxima: \(subscription.nextRenewalDate.formatted(date: .abbreviated, time: .omitted))")
+                                            .font(.caption).foregroundStyle(isSoon(subscription) ? .orange : .secondary)
+                                    }
+                                }
+                                Spacer(minLength: 4)
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    Text(Money.format(subscription.amountCents)).font(.subheadline.bold()).monospacedDigit()
+                                    Text(subscription.cycle.title.lowercased()).font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                         }.buttonStyle(.plain)
-                        Toggle("Ativa", isOn: Binding(get: { subscription.isActive }, set: { active in
+                        Toggle("Registrar próximas cobranças", isOn: Binding(get: { subscription.isActive }, set: { active in
                             do { try viewModel.setActive(active, subscription: subscription, context: context) }
                             catch { self.error = error.localizedDescription }
-                        }))
+                        })).font(.caption)
                     }
                     .swipeActions {
                         Button("Excluir", role: .destructive) { deleting = subscription }
                         Button("Editar") { editing = subscription }.tint(.blue)
                     }
                 }
+            } header: { Text(showActive ? "Serviços e contas recorrentes" : "Recorrências pausadas") } footer: {
+                Text("Média: mensal = valor; anual ÷ 12; semanal × 52 ÷ 12. Pausar no Ledger interrompe os lançamentos futuros e os alertas; não cancela sua contratação com o serviço.")
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("Assinaturas")
+        .navigationTitle("Recorrentes")
+        .searchable(text: $search, prompt: "Buscar serviço ou conta")
         .toolbar { Button("Adicionar assinatura", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { AddTransactionView(initialMode: .subscription) }
         .sheet(item: $editing) { AddTransactionView(subscription: $0) }

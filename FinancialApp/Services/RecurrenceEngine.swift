@@ -58,6 +58,6 @@ struct RecurrenceEngine {
                 subscription.nextRenewalDate = date(for: subscription, index: occurrence.index + 1)
             }
         }
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 }

@@ -2,9 +2,10 @@ import SwiftUI
 import SwiftData
 
 enum EntryMode: String, CaseIterable, Identifiable {
-    case single = "À vista / avulsa"
-    case installment = "Parcelado"
-    case subscription = "Recorrente / assinatura"
+    case single = "Gasto ou receita"
+    case installment = "Compra parcelada"
+    case subscription = "Conta recorrente / assinatura"
+    case scheduled = "Conta a pagar"
     var id: String { rawValue }
 }
 
@@ -17,6 +18,7 @@ struct AddTransactionView: View {
     var subscription: Subscription? = nil
     var initialCard: CreditCard? = nil
     var initialMode: EntryMode = .single
+    var initialKind: TransactionKind = .expense
     @State private var mode: EntryMode = .single
     @State private var title = ""
     @State private var amount = ""
@@ -58,7 +60,11 @@ struct AddTransactionView: View {
                             ForEach(TransactionKind.allCases) { Text($0.title).tag($0) }
                         }
                     }
-                    if mode == .subscription {
+                    if mode == .scheduled {
+                        DatePicker("Vencimento", selection: $date, displayedComponents: .date)
+                        Label("O saldo será descontado quando você marcar como pago na Agenda.", systemImage: "calendar.badge.clock")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else if mode == .subscription {
                         Picker("Periodicidade", selection: $cycle) {
                             ForEach(BillingCycle.allCases) { Text($0.title).tag($0) }
                         }
@@ -68,7 +74,7 @@ struct AddTransactionView: View {
                         DatePicker("Data", selection: $date, in: ...Date.now, displayedComponents: .date)
                     }
                 }
-                if transaction == nil && (mode != .single || kind == .expense) {
+                if transaction == nil && mode != .scheduled && (mode != .single || kind == .expense) {
                     Section {
                         Picker("Cobrança", selection: $cardID) {
                             if mode != .installment { Text("Débito / conta").tag(nil as UUID?) }
@@ -115,6 +121,7 @@ struct AddTransactionView: View {
         guard !loaded else { return }
         loaded = true
         mode = initialMode
+        kind = initialKind
         cardID = initialCard?.id
         if let transaction {
             title = transaction.title; amount = Money.input(transaction.amountCents)
@@ -133,7 +140,10 @@ struct AddTransactionView: View {
                   let cents = Money.parse(amount) else {
                 throw FinanceError.invalid("Informe título e valor válido em reais, como 1.234,56.")
             }
-            if mode == .subscription {
+            if mode == .scheduled {
+                try ScheduledPaymentViewModel().save(context: context, title: title, amountText: amount,
+                                                      dueDate: date, notes: "", categoryID: categoryID)
+            } else if mode == .subscription {
                 try SubscriptionViewModel().save(context: context, subscription: subscription, title: title,
                                                   amountText: amount, cycle: cycle, renewalDate: date,
                                                   category: selectedCategory, card: selectedCard)

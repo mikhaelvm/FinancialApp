@@ -14,17 +14,32 @@ struct CreditCardsView: View {
             }
             ForEach(cards) { card in
                 NavigationLink { CreditCardDetailView(card: card) } label: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label(card.name, systemImage: "creditcard.fill").font(.headline)
-                        Text("Disponível: \(Money.format(card.availableLimitCents))").font(.subheadline)
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Label(card.name, systemImage: "creditcard.fill").font(.headline)
+                            Spacer()
+                            Image(systemName: "wave.3.right").accessibilityHidden(true)
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Limite disponível").font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Text(Money.format(card.availableLimitCents)).font(.title2.bold()).monospacedDigit()
+                        }
                         ProgressView(value: min(Double(card.usedLimitCents), Double(card.limitCents)),
                                      total: Double(max(1, card.limitCents)))
+                            .tint(.mint)
                             .accessibilityLabel("Limite utilizado")
                             .accessibilityValue(Money.format(card.usedLimitCents))
-                        Text("Fecha dia \(card.closingDay) • Vence dia \(card.dueDay)")
-                            .font(.caption).foregroundStyle(.secondary)
+                        HStack(alignment: .top) {
+                            Text("Limite total\n\(Money.format(card.limitCents))")
+                            Spacer()
+                            Text("Fecha \(card.closingDay) • Vence \(card.dueDay)")
+                        }.font(.caption).foregroundStyle(.white.opacity(0.85))
                     }
+                    .foregroundStyle(.white).padding(22)
+                    .background(LedgerTheme.hero, in: RoundedRectangle(cornerRadius: 24))
                 }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 4))
                 .swipeActions {
                     Button("Excluir", role: .destructive) {
                         do { try CreditCardViewModel().delete(context: context, card: card) }
@@ -35,6 +50,13 @@ struct CreditCardsView: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Cartões")
+        .navigationDestination(for: UUID.self) { id in
+            if let card = cards.first(where: { $0.id == id }) {
+                CreditCardDetailView(card: card)
+            } else {
+                ContentUnavailableView("Cartão não encontrado", systemImage: "creditcard")
+            }
+        }
         .toolbar { Button("Adicionar cartão", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { CardFormView() }
         .financeError($error)

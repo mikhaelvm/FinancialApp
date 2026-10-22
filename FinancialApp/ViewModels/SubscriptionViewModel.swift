@@ -51,6 +51,6 @@ final class SubscriptionViewModel {
 
     func delete(_ subscription: Subscription, context: ModelContext) throws {
         context.delete(subscription)
-        do { try context.save() } catch { context.rollback(); throw error }
+        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 }

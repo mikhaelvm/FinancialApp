@@ -1,23 +1,34 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
     @State private var error: String?
     @State private var initialized = false
+    @State private var router = LedgerRouter.shared
 
     var body: some View {
-        TabView {
+        TabView(selection: $router.selectedTab) {
             NavigationStack { DashboardView() }
-                .tabItem { Label("Resumo", systemImage: "chart.bar.xaxis") }
+                .tabItem { Label("Início", systemImage: "square.grid.2x2.fill") }.tag(LedgerTab.dashboard)
             NavigationStack { TransactionsView() }
-                .tabItem { Label("Transações", systemImage: "arrow.left.arrow.right") }
-            NavigationStack { CreditCardsView() }
-                .tabItem { Label("Cartões", systemImage: "creditcard") }
+                .tabItem { Label("Extrato", systemImage: "list.bullet.rectangle") }.tag(LedgerTab.transactions)
+            NavigationStack(path: $router.cardPath) { CreditCardsView() }
+                .tabItem { Label("Cartões", systemImage: "creditcard") }.tag(LedgerTab.cards)
             NavigationStack { SubscriptionsView() }
-                .tabItem { Label("Assinaturas", systemImage: "repeat") }
+                .tabItem { Label("Recorrentes", systemImage: "repeat") }.tag(LedgerTab.subscriptions)
+            NavigationStack { PaymentAgendaView() }
+                .tabItem { Label("Agenda", systemImage: "calendar") }.tag(LedgerTab.agenda)
         }
+        .environment(router)
+        .onOpenURL { router.open($0) }
+        .sheet(isPresented: $router.showNewExpense) { AddTransactionView() }
+        .onReceive(NotificationCenter.default.publisher(for: FinanceEvents.didChange)
+            .debounce(for: .milliseconds(350), scheduler: RunLoop.main)) { _ in
+                NotificationService.shared.refresh(context: context)
+            }
         .task { refresh() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { refresh() } }
         .task {
@@ -34,6 +45,7 @@ struct RootView: View {
         do {
             if !initialized { try Persistence.seed(context: context); initialized = true }
             try RecurrenceEngine().synchronize(context: context)
+            NotificationService.shared.refresh(context: context)
         } catch { self.error = error.localizedDescription }
     }
 }

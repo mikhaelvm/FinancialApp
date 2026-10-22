@@ -21,16 +21,17 @@ struct DashboardSnapshot {
     let payments: Int64
     let pendingInvoices: Int64
     let upcomingCash: Int64
+    let scheduledCents: Int64
     let categories: [CategoryExpense]
     let forecasts: [MonthForecast]
-    var projectedBalance: Int64 { balance - pendingInvoices - upcomingCash }
+    var projectedBalance: Int64 { balance - pendingInvoices - upcomingCash - scheduledCents }
 }
 
 @MainActor @Observable
 final class DashboardViewModel {
     func snapshot(transactions: [Transaction], cards: [CreditCard],
                   subscriptions: [Subscription], payments: [InvoicePayment],
-                  month: Date, today: Date = .now) -> DashboardSnapshot {
+                  month: Date, today: Date = .now, scheduled: [ScheduledPayment] = []) -> DashboardSnapshot {
         let endOfToday = FinanceDate.calendar.date(byAdding: .day, value: 1, to: FinanceDate.day(today))!
         let cash = transactions.filter { $0.card == nil && $0.date < endOfToday }
         let realizedPayments = payments.filter { $0.date < endOfToday }
@@ -70,8 +71,10 @@ final class DashboardViewModel {
                 FinanceDate.sameMonth($0.dueDate, date)
             }.reduce(Int64(0)) { $0 + $1.remainingCents })
         }
+        let scheduledCents = scheduled.filter { !$0.isPaid && $0.dueDate < nextMonth }
+            .reduce(Int64(0)) { $0 + $1.amountCents }
         return DashboardSnapshot(balance: balance, income: income, cashExpenses: expenses,
-                                 payments: paid, pendingInvoices: pending, upcomingCash: upcomingCash,
+                                 payments: paid, pendingInvoices: pending, upcomingCash: upcomingCash, scheduledCents: scheduledCents,
                                  categories: categories.values.sorted { $0.cents > $1.cents }, forecasts: forecasts)
     }
 }

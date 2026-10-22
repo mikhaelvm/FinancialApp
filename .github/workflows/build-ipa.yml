@@ -1,4 +1,4 @@
-name: Build unsigned iOS IPA
+name: Build Ledger IPA
 
 on:
   workflow_dispatch:
@@ -20,6 +20,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Select newest installed Xcode
+        run: |
+          python3 - <<'PY'
+          import glob, os, pathlib, plistlib
+          candidates = []
+          for app in glob.glob('/Applications/Xcode*.app'):
+              with open(pathlib.Path(app) / 'Contents/Info.plist', 'rb') as f:
+                  version = plistlib.load(f)['CFBundleShortVersionString']
+              parts = tuple(int(x) for x in version.split('.') if x.isdigit())
+              candidates.append((parts, app))
+          if not candidates:
+              raise SystemExit('No Xcode installation found')
+          _, app = max(candidates)
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write(f'DEVELOPER_DIR={app}/Contents/Developer\n')
+          print(f'Selected {app}')
+          PY
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -29,7 +47,11 @@ jobs:
           xcodegen --version
 
       - name: Generate project
-        run: xcodegen generate --spec project.yml
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/tests -v
+          python3 scripts/prepare_build.py --sdk-version "$(xcrun --sdk iphoneos --show-sdk-version)"
+          xcodegen generate --spec project-ci.yml
 
       - name: Select available iPhone simulator
         run: |
@@ -79,14 +101,14 @@ jobs:
           mkdir -p build/package/Payload
           ditto "$APP" build/package/Payload/FinancialApp.app
           cd build/package
-          zip -qry ../FinancialApp.ipa Payload
-          unzip -t ../FinancialApp.ipa
+          zip -qry ../Ledger.ipa Payload
+          unzip -t ../Ledger.ipa
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: FinancialApp-unsigned
-          path: build/FinancialApp.ipa
+          name: Ledger-unsigned
+          path: build/Ledger.ipa
           if-no-files-found: error
           retention-days: 14
 
