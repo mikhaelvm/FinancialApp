@@ -38,7 +38,7 @@ struct CreditCardDetailView: View {
             let month = FinanceDate.monthOffset(offset, from: .now)
             return MonthForecast(month: month, invoiceCents: invoices.filter { FinanceDate.sameMonth($0.dueDate, month) }.reduce(0) { $0 + $1.remainingCents })
         }
-        List {
+        return List {
             Section("Limite") {
                 CreditLimitSummary(card: card)
                 if card.usedLimitCents > card.limitCents {
