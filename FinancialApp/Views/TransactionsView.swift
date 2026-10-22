@@ -8,6 +8,8 @@ struct TransactionsView: View {
     @Query(sort: \InvoicePayment.date, order: .reverse) private var payments: [InvoicePayment]
     @Query private var scheduled: [ScheduledPayment]
     @Query(sort: \Category.name) private var categories: [Category]
+    @Query private var cards: [CreditCard]
+    @State private var viewingPurchase: CardPurchaseGroup?
     @State private var period = LedgerTransactionPeriod.all
     @State private var kind: TransactionKind?
     @State private var categoryID: UUID?
@@ -27,6 +29,13 @@ struct TransactionsView: View {
         }
     }
     private var hasFilters: Bool { period != .all || kind != nil || categoryID != nil || !router.searchTerm.isEmpty }
+    private var cardPurchases: [CardPurchaseGroup] {
+        guard kind != .income else { return [] }
+        return CardPurchaseService.groups(for: cards).filter {
+            period.includes($0.date) && (categoryID == nil || $0.category?.id == categoryID)
+                && (router.searchTerm.isEmpty || $0.title.localizedCaseInsensitiveContains(router.searchTerm) || $0.card.name.localizedCaseInsensitiveContains(router.searchTerm))
+        }
+    }
     private var visiblePayments: [InvoicePayment] {
         payments.filter { period.includes($0.date) && kind != .income && categoryID == nil
             && (router.searchTerm.isEmpty || ($0.card?.name ?? "").localizedCaseInsensitiveContains(router.searchTerm)) }
@@ -47,7 +56,7 @@ struct TransactionsView: View {
                 if hasFilters { Button("Limpar filtros") { clearFilters() } }
             } header: { Text("Filtrar extrato") }
             Section("Lançamentos na conta") {
-                if cash.isEmpty {
+                if cash.isEmpty && cardPurchases.isEmpty && visiblePayments.isEmpty {
                     ContentUnavailableView(hasFilters ? "Nenhum resultado" : "Nenhuma transação", systemImage: hasFilters ? "line.3.horizontal.decrease.circle" : "banknote",
                                            description: Text(hasFilters ? "Tente outro período, categoria ou termo de busca." : "Adicione receitas e despesas. Para saldo inicial, registre uma receita."))
                 }
@@ -69,6 +78,15 @@ struct TransactionsView: View {
                             Button("Editar") { editing = transaction }.tint(.blue)
                         }
                     }
+                }
+            }
+            if !cardPurchases.isEmpty {
+                Section {
+                    ForEach(cardPurchases) { purchase in
+                        Button { viewingPurchase = purchase } label: { CardPurchaseRow(purchase: purchase) }.buttonStyle(.plain)
+                    }
+                } header: { Text("Compras nos cartões") } footer: {
+                    Text("Organizadas pela data da compra, com o valor total e as parcelas nos detalhes. Não são descontadas novamente do saldo ao serem listadas aqui.")
                 }
             }
             if !visiblePayments.isEmpty {
@@ -95,6 +113,7 @@ struct TransactionsView: View {
         .sheet(item: $editing) { AddTransactionView(transaction: $0) }
         .sheet(item: $viewing) { LedgerTransactionDetailView(transaction: $0) }
         .sheet(item: $repeating) { AddTransactionView(draft: $0) }
+        .sheet(item: $viewingPurchase) { CardPurchaseDetailView(card: $0.card, purchaseID: $0.purchaseID) }
         .onAppear(perform: openRequestedTransaction)
         .onChange(of: router.selectedTransactionID) { _, _ in openRequestedTransaction() }
         .confirmationDialog("Excluir esta transação?", isPresented: Binding(

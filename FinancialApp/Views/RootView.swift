@@ -17,10 +17,8 @@ struct RootView: View {
                 .tabItem { Label("Extrato", systemImage: "list.bullet.rectangle") }.tag(LedgerTab.transactions)
             NavigationStack(path: $router.cardPath) { CreditCardsView() }
                 .tabItem { Label("Cartões", systemImage: "creditcard") }.tag(LedgerTab.cards)
-            NavigationStack { SubscriptionsView() }
-                .tabItem { Label("Recorrentes", systemImage: "repeat") }.tag(LedgerTab.subscriptions)
-            NavigationStack { PaymentAgendaView() }
-                .tabItem { Label("Agenda", systemImage: "calendar") }.tag(LedgerTab.agenda)
+            NavigationStack { PaymentsView() }
+                .tabItem { Label("Pagamentos", systemImage: "calendar") }.tag(LedgerTab.agenda)
         }
         .environment(router)
         .onOpenURL { router.open($0) }

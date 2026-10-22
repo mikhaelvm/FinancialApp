@@ -2,7 +2,16 @@
 
 Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, sem CloudKit, servidor ou assinatura de sincronização. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
-## Versão 1.4.1
+## Versão 1.5.0
+
+- Quatro abas: Resumo, Extrato, Cartões e Pagamentos. Agenda e Recorrentes ficam juntas em Pagamentos, com um seletor; links e lembretes anteriores continuam funcionando.
+- Entrada monetária em centavos com formatação automática: digitar 123456 mostra 1.234,56, sem precisar inserir vírgula.
+- Compras do cartão em seção própria, com todas as compras ou apenas a fatura selecionada. O detalhe mostra parcelas e permite excluir a compra inteira.
+- Extrato e Resumo também exibem compras do cartão, sem descontar novamente o saldo da conta.
+- Exclusão de cartão vermelha, com confirmação, disponível ao arrastar e no formulário de edição. Pagamentos realizados são preservados no Extrato; recorrências vinculadas são pausadas.
+- Excluir uma compra recalcula as faturas e mantém o saldo realizado: pagamentos que excedam as cobranças restantes são preservados como despesas na conta.
+- Planejamento sem seta duplicada e previsão de faturas alinhada como na tela do cartão.
+- Redefinição exige apenas confirmação no alerta, sem digitar APAGAR.
 
 - Resumo com Ajustes à esquerda e ações de ocultar valores/novo lançamento à direita.
 - Check do teclado fecha tanto o título quanto o valor do lançamento. O formulário do cartão também oferece conclusão para nome e limite, com R$ sempre visível.
@@ -211,7 +220,7 @@ Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **61 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **68 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 

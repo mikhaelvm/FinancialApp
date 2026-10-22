@@ -17,6 +17,7 @@ struct DashboardView: View {
     @State private var entry: DashboardEntry?
     @State private var showSettings = false
     @State private var showForecast = false
+    @State private var selectedPurchase: CardPurchaseGroup?
 
     private var upcoming: [PaymentCommitment] {
         let end = FinanceDate.calendar.date(byAdding: .day, value: 7, to: FinanceDate.day(.now))!
@@ -77,8 +78,17 @@ struct DashboardView: View {
                         PaymentCommitmentRow(item: item)
                     }.buttonStyle(.plain)
                 }
-                Button("Ver todos os pagamentos") { router.selectedTab = .agenda }
+                Button("Ver todos os pagamentos") { router.openPayments() }
             } header: { Text("Próximos pagamentos") }
+            if !CardPurchaseService.groups(for: cards).isEmpty {
+                Section {
+                    ForEach(Array(CardPurchaseService.groups(for: cards).prefix(3))) { purchase in
+                        Button { selectedPurchase = purchase } label: { CardPurchaseRow(purchase: purchase) }.buttonStyle(.plain)
+                    }
+                } header: { Text("Últimas compras no cartão") } footer: {
+                    Text("Compras e parcelas também aparecem no Extrato. O saldo da conta muda somente ao pagar a fatura.")
+                }
+            }
             Section("Despesas por categoria") {
                 if snapshot.categories.isEmpty {
                     Text("Adicione uma despesa para conhecer seus hábitos.").foregroundStyle(.secondary)
@@ -96,7 +106,14 @@ struct DashboardView: View {
                 }
             }
             Section {
-                DisclosureGroup("Faturas dos próximos 12 meses", isExpanded: $showForecast) {
+                Button { showForecast.toggle() } label: {
+                    HStack {
+                        Text("Faturas dos próximos 12 meses").foregroundStyle(Color.primary)
+                        Spacer()
+                        Image(systemName: showForecast ? "chevron.up" : "chevron.down").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    }.contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                if showForecast {
                     InvoiceForecastChart(forecasts: snapshot.forecasts)
                     ForEach(snapshot.forecasts) { item in MonthAmountRow(month: item.month, cents: item.invoiceCents) }
                 }
@@ -121,6 +138,7 @@ struct DashboardView: View {
         }
         .sheet(item: $entry) { action in AddTransactionView(initialMode: action.mode, initialKind: action.kind) }
         .sheet(isPresented: $showSettings) { NavigationStack { LedgerSettingsView() } }
+        .sheet(item: $selectedPurchase) { CardPurchaseDetailView(card: $0.card, purchaseID: $0.purchaseID) }
         .onChange(of: hideAmounts) { _, _ in WidgetSnapshotService.refresh(context: context) }
     }
 }

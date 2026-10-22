@@ -2,7 +2,12 @@ import Foundation
 import Observation
 
 enum LedgerTab: String, CaseIterable {
-    case dashboard, transactions, cards, subscriptions, agenda
+    case dashboard, transactions, cards, agenda
+}
+
+enum PaymentsSection: String, CaseIterable, Identifiable {
+    case calendar = "Agenda", recurring = "Recorrentes"
+    var id: String { rawValue }
 }
 
 @MainActor @Observable
@@ -14,10 +19,16 @@ final class LedgerRouter {
     var selectedTransactionID: UUID?
     var showNewExpense = false
     var showNewIncome = false
+    var paymentsSection = PaymentsSection.calendar
+
+    func openPayments(_ section: PaymentsSection = .calendar) {
+        paymentsSection = section; selectedTab = .agenda
+    }
 
     func reset() {
         selectedTab = .dashboard; cardPath = []; searchTerm = ""; selectedTransactionID = nil
         showNewExpense = false; showNewIncome = false
+        paymentsSection = .calendar
     }
 
     func search(_ term: String) {
@@ -30,9 +41,9 @@ final class LedgerRouter {
             cardPath = [id]
             selectedTab = .cards
         } else if kind == "subscription" {
-            selectedTab = .subscriptions
+            openPayments(.recurring)
         } else {
-            selectedTab = .agenda
+            openPayments()
         }
     }
 
@@ -41,8 +52,8 @@ final class LedgerRouter {
         switch url.host {
         case "expense": showNewExpense = true
         case "income": showNewIncome = true
-        case "agenda": selectedTab = .agenda
-        case "subscriptions": selectedTab = .subscriptions
+        case "agenda": openPayments()
+        case "subscriptions": openPayments(.recurring)
         case "cards": selectedTab = .cards
         case "search":
             let term = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?

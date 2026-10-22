@@ -15,9 +15,19 @@ enum StatementImportService {
             "\(StatementParser.dayKey($0.date))|\($0.kind == .expense ? -$0.amountCents : $0.amountCents)|\(StatementParser.normalize($0.title))"
         })
         let categories = try context.fetch(FetchDescriptor<Category>())
-        let invoicePayments = Set(try context.fetch(FetchDescriptor<InvoicePayment>()).map {
+        let payments = try context.fetch(FetchDescriptor<InvoicePayment>())
+        var invoicePayments = Set(payments.map {
             "\(StatementParser.dayKey($0.date))|\(-$0.amountCents)"
         })
+        var originalPayments = Dictionary(uniqueKeysWithValues: payments.map { ($0.id.uuidString, ($0.date, $0.amountCents)) })
+        for transaction in transactions where transaction.card == nil && transaction.kind == .expense {
+            guard let key = transaction.recurrenceKey, key.hasPrefix("preserved-card-payment:") else { continue }
+            let id = String(key.dropFirst("preserved-card-payment:".count).prefix(36))
+            guard UUID(uuidString: id) != nil else { continue }
+            let previous = originalPayments[id]?.1 ?? 0
+            originalPayments[id] = (transaction.date, previous + transaction.amountCents)
+        }
+        for (date, cents) in originalPayments.values { invoicePayments.insert("\(StatementParser.dayKey(date))|\(-cents)") }
         let scheduledIDs = Set(try context.fetch(FetchDescriptor<ScheduledPayment>()).compactMap(\.paidTransactionID))
         let managedCash = Set(transactions.filter { $0.card == nil && ($0.isAutomaticRecurrence || $0.isImportedStatement || scheduledIDs.contains($0.id)) }.map {
             "\(StatementParser.dayKey($0.date))|\($0.kind == .expense ? -$0.amountCents : $0.amountCents)"

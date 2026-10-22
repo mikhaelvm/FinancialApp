@@ -9,6 +9,16 @@ enum FinanceError: LocalizedError {
 
 enum Money {
     static let maximumCents: Int64 = 1_000_000_000_000
+    /// Bank-style entry: each typed digit shifts the amount by one cent.
+    static func bankInput(_ proposed: String, previous: String = "") -> String {
+        let digits = proposed.filter { $0 >= "0" && $0 <= "9" }
+        guard !digits.isEmpty else { return "" }
+        let significant = String(digits.drop(while: { $0 == "0" }))
+        guard !significant.isEmpty else { return "" }
+        guard significant.count <= 13, let cents = Int64(significant), cents <= maximumCents else { return previous }
+        let integer = (cents / 100).formatted(.number.locale(Locale(identifier: "pt_BR")))
+        return integer + "," + String(format: "%02lld", cents % 100)
+    }
     static func parse(_ text: String) -> Int64? {
         let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "R$", with: "")

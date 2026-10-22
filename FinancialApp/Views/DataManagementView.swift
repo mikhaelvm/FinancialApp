@@ -22,7 +22,6 @@ struct DataManagementView: View {
     @State private var message: String?
     @State private var error: String?
     @State private var confirmingReset = false
-    @State private var resetText = ""
     @AppStorage("ledger.lastBackupExport") private var lastBackupExport = 0.0
     var body: some View {
         Form {
@@ -49,7 +48,7 @@ struct DataManagementView: View {
             }
             if let message { Section { Label(message, systemImage: "checkmark.circle").foregroundStyle(.green) } }
             Section {
-                Button("Apagar todos os dados e redefinir", role: .destructive) { resetText = ""; confirmingReset = true }
+                Button("Apagar todos os dados e redefinir", role: .destructive) { confirmingReset = true }
                     .foregroundStyle(.red)
             } header: { Text("Redefinir Ledger") } footer: {
                 Text("Remove lançamentos, cartões, pagamentos, recorrências e categorias personalizadas, cancela os lembretes e restaura as preferências. Os arquivos de backup que você exportou não serão apagados.")
@@ -86,14 +85,13 @@ struct DataManagementView: View {
         }
         .statementImporter(isPresented: $importingStatement)
         .alert("Apagar todos os dados?", isPresented: $confirmingReset) {
-            TextField("Digite APAGAR", text: $resetText).textInputAutocapitalization(.characters).autocorrectionDisabled()
             Button("Cancelar", role: .cancel) { }
             Button("Apagar e redefinir", role: .destructive) {
                 do { try AppResetService.reset(context: context); message = "Ledger restaurado aos padrões." }
                 catch { self.error = error.localizedDescription }
-            }.disabled(resetText != "APAGAR")
+            }
         } message: {
-            Text("Esta ação não pode ser desfeita. Exporte um backup antes se quiser preservar seus registros. Digite APAGAR para confirmar. A permissão de notificações do iOS continua sendo controlada pelos Ajustes do sistema.")
+            Text("Esta ação não pode ser desfeita. Exporte um backup antes se quiser preservar seus registros. A permissão de notificações do iOS continua sendo controlada pelos Ajustes do sistema.")
         }
         .financeError($error)
     }

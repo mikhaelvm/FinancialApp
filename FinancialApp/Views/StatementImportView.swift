@@ -194,7 +194,7 @@ private struct StatementReviewRow: View {
                 Label("PDF: confira antes de selecionar", systemImage: "doc.text.viewfinder").font(.caption).foregroundStyle(.orange)
                 TextField("Descrição", text: $row.title)
                 DatePicker("Data", selection: $row.date, in: ...Date.now, displayedComponents: .date)
-                TextField("Valor em reais", text: $amountText).keyboardType(.decimalPad)
+                TextField("Valor em reais", text: $amountText.bankCurrency).keyboardType(.numberPad)
                 Picker("Natureza", selection: Binding(get: { row.kind }, set: { kind in
                     row.signedCents = kind == .expense ? -abs(row.signedCents) : abs(row.signedCents)
                 })) {

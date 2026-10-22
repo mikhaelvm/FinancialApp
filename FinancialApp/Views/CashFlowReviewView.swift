@@ -43,20 +43,18 @@ struct SpendingComparisonRow: View {
     let comparison: SpendingComparison
     @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     var body: some View {
-        HStack(alignment: .top, spacing: LedgerTheme.rowSpacing) {
-            SymbolTile(symbol: "chart.line.uptrend.xyaxis")
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Saídas até o dia \(comparison.day)").font(.subheadline.weight(.semibold)).foregroundStyle(Color.primary)
+        VStack(alignment: .leading, spacing: 8) {
+                Label {
+                    Text("Saídas até o dia \(comparison.day)").foregroundStyle(Color.primary)
+                } icon: { Image(systemName: "chart.line.uptrend.xyaxis").foregroundStyle(LedgerTheme.accent) }
+                    .font(.subheadline.weight(.medium))
                 if hideAmounts { Text("Valores ocultos").font(.caption).foregroundStyle(.secondary) }
                 else if let percent = comparison.percentChange {
                     Text("\(abs(percent).formatted(.number.precision(.fractionLength(0))))% \(percent > 0 ? "a mais" : (percent < 0 ? "a menos" : "de variação")) em relação ao mesmo período do mês anterior")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
-                    Text("Ainda não há saídas registradas no período anterior para comparar.").font(.caption).foregroundStyle(.secondary)
+                    Text("Sem saídas no período anterior para comparar.").font(.caption).foregroundStyle(.secondary)
                 }
-            }
-            Spacer(minLength: 4)
-            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-        }.padding(.vertical, 4)
+        }.padding(.vertical, 5)
     }
 }

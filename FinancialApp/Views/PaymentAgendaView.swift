@@ -101,7 +101,7 @@ struct PaymentAgendaView: View {
                 Text("Previsão dos próximos 60 dias. Cobranças no cartão aparecem junto à fatura, mas não aumentam o total de saídas da conta novamente. Assinaturas na conta são lançadas automaticamente na data de renovação.")
             }
         }
-        .ledgerListScreen("Agenda")
+        .ledgerListScreen("Pagamentos")
         .toolbar { LedgerToolbarButton("Agendar pagamento", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { ScheduledPaymentForm() }
         .sheet(item: $editing) { ScheduledPaymentForm(payment: $0) }
@@ -156,19 +156,25 @@ struct ScheduledPaymentForm: View {
     @State private var error: String?
     @State private var confirmPayment = false
     @State private var confirmDelete = false
+    private enum Field: Hashable { case title, amount, notes }
+    @FocusState private var focusedField: Field?
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Sua conta") {
-                    TextField("Ex.: Conta de energia", text: $title)
-                    TextField("Valor em reais", text: $amount).keyboardType(.decimalPad)
+                    TextField("Ex.: Conta de energia", text: $title).focused($focusedField, equals: .title)
+                        .submitLabel(.done).onSubmit { focusedField = nil }
+                    HStack {
+                        Text("R$").foregroundStyle(.secondary)
+                        TextField("0,00", text: $amount.bankCurrency).keyboardType(.numberPad).focused($focusedField, equals: .amount).accessibilityLabel("Valor em reais")
+                    }
                     DatePicker("Vencimento", selection: $dueDate, displayedComponents: .date)
                     Picker("Categoria", selection: $categoryID) {
                         Text("Sem categoria").tag(nil as UUID?)
                         ForEach(categories) { Text($0.name).tag(Optional($0.id)) }
                     }
-                    TextField("Observações (opcional)", text: $notes, axis: .vertical)
+                    TextField("Observações (opcional)", text: $notes, axis: .vertical).focused($focusedField, equals: .notes)
                 }
                 Section {
                     Label("Seu saldo só muda ao registrar o pagamento.", systemImage: "info.circle")
@@ -181,6 +187,10 @@ struct ScheduledPaymentForm: View {
             }
             .ledgerFormScreen(payment == nil ? "Agendar conta" : "Editar conta")
             .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    LedgerToolbarButton("Fechar teclado", systemImage: "checkmark") { focusedField = nil }
+                }
                 ToolbarItem(placement: .cancellationAction) { LedgerToolbarButton("Cancelar", systemImage: "xmark") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     LedgerToolbarButton("Salvar", systemImage: "checkmark") {

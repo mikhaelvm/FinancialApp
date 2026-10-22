@@ -5,6 +5,7 @@ import Charts
 struct CreditCardDetailView: View {
     let card: CreditCard
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @Query private var subscriptions: [Subscription]
     @State private var selectedDue: Date?
     @State private var showEdit = false
@@ -24,6 +25,13 @@ struct CreditCardDetailView: View {
     }
 
     var body: some View {
+        Group {
+            if card.modelContext != nil { cardContent }
+            else { ContentUnavailableView("Cartão excluído", systemImage: "creditcard") }
+        }.onAppear { if card.modelContext == nil { dismiss() } }
+    }
+
+    private var cardContent: some View {
         let invoices = self.invoices
         let selected = selectedInvoice(in: invoices)
         let forecasts = (0..<12).map { offset in
@@ -63,27 +71,12 @@ struct CreditCardDetailView: View {
                                 confirmPayment = true
                             }
                         }
-                        ForEach(invoice.lines.sorted { $0.title < $1.title }) { line in
-                            VStack(alignment: .leading, spacing: 6) {
-                                MoneyRow(title: line.title, cents: line.amountCents,
-                                         symbol: line.isProjected ? "clock.arrow.circlepath" : "bag")
-                                CategoryLabel(category: line.category).font(.caption)
-                                if line.totalInstallments > 1 {
-                                    Text("Parcela \(line.installmentNumber)/\(line.totalInstallments)")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                    ProgressView(value: Double(line.installmentNumber), total: Double(line.totalInstallments))
-                                        .accessibilityLabel("Parcela \(line.installmentNumber) de \(line.totalInstallments)")
-                                }
-                                if line.isProjected {
-                                    Text("Previsão de assinatura • ainda não lançada").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
                     }
                 }
             } header: { Text("Faturas abertas, fechadas e futuras") } footer: {
                 Text("Registrar pagamento representa uma saída da conta e libera o limite. O app não movimenta dinheiro no banco.")
             }
+            CardPurchasesSection(card: card, invoice: selected)
             Section {
                 InvoiceForecastChart(forecasts: forecasts)
                 ForEach(forecasts) { item in MonthAmountRow(month: item.month, cents: item.invoiceCents) }
@@ -111,7 +104,7 @@ struct CreditCardDetailView: View {
                 LedgerToolbarButton("Adicionar compra", systemImage: "plus") { showPurchase = true }
             }
         }
-        .sheet(isPresented: $showEdit) { CardFormView(card: card) }
+        .sheet(isPresented: $showEdit, onDismiss: { if card.modelContext == nil { dismiss() } }) { CardFormView(card: card) }
         .sheet(isPresented: $showPurchase) { AddTransactionView(initialCard: card) }
         .confirmationDialog("Confirmar pagamento da fatura?", isPresented: $confirmPayment, titleVisibility: .visible) {
             Button("Registrar pagamento") {

@@ -91,7 +91,7 @@ struct SubscriptionsView: View {
                 Text("Média: mensal = valor; anual ÷ 12; semanal × 52 ÷ 12. Pausar no Ledger interrompe os lançamentos futuros e os alertas; não cancela sua contratação com o serviço.")
             }
         }
-        .ledgerListScreen("Recorrentes")
+        .ledgerListScreen("Pagamentos")
         .searchable(text: $search, prompt: "Buscar serviço ou conta")
         .toolbar { LedgerToolbarButton("Adicionar assinatura", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { AddTransactionView(initialMode: .subscription) }

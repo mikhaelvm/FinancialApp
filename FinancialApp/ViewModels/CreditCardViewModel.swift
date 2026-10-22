@@ -4,6 +4,7 @@ import SwiftData
 
 @MainActor @Observable
 final class CreditCardViewModel {
+    static let deletionExplanation = "O cartão, suas compras, parcelas e faturas serão removidos. Pagamentos já realizados serão preservados como despesas no Extrato, mantendo o saldo da conta. Recorrências vinculadas serão pausadas."
     func save(context: ModelContext, card: CreditCard? = nil, name: String,
               limitText: String, closingDay: Int, dueDay: Int) throws {
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -57,10 +58,39 @@ final class CreditCardViewModel {
         do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }
 
-    func delete(context: ModelContext, card: CreditCard) throws {
-        guard card.transactions.isEmpty, card.payments.isEmpty, card.subscriptions.isEmpty else {
-            throw FinanceError.invalid("Cartões com lançamentos ou assinaturas devem ser mantidos para preservar o histórico.")
+    func deletePurchase(context: ModelContext, card: CreditCard, purchaseID: UUID) throws {
+        guard card.modelContext === context else { throw FinanceError.invalid("O cartão já foi removido ou não pertence a este contexto.") }
+        guard let purchase = CardPurchaseService.groups(for: card).first(where: { $0.purchaseID == purchaseID }) else {
+            throw FinanceError.invalid("Esta compra já foi removida.")
         }
+        let deletedIDs = Set(purchase.transactions.map(\.id))
+        for due in Set(purchase.transactions.compactMap(\.invoiceDueDate)) {
+            let remainingCharges = card.transactions.filter { $0.invoiceDueDate == due && !deletedIDs.contains($0.id) }
+                .reduce(Int64(0)) { $0 + $1.amountCents }
+            let payments = card.payments.filter { $0.invoiceDueDate == due }.sorted { $0.date > $1.date }
+            var excess = max(0, payments.reduce(Int64(0)) { $0 + $1.amountCents } - remainingCharges)
+            for payment in payments where excess > 0 {
+                let portion = min(excess, payment.amountCents)
+                context.insert(Transaction(title: "Pagamento de fatura • \(card.name)", amountCents: portion,
+                    kind: .expense, date: payment.date,
+                    recurrenceKey: "preserved-card-payment:" + payment.id.uuidString + ":purchase:" + purchaseID.uuidString))
+                if portion == payment.amountCents { context.delete(payment) }
+                else { payment.amountCents -= portion }
+                excess -= portion
+            }
+        }
+        for transaction in purchase.transactions { context.delete(transaction) }
+        do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
+    }
+
+    func delete(context: ModelContext, card: CreditCard) throws {
+        guard card.modelContext === context else { throw FinanceError.invalid("Este cartão já foi removido.") }
+        // Keep realized cash outflows even after removing the card and its history.
+        for payment in card.payments {
+            context.insert(Transaction(title: "Pagamento de fatura • \(card.name)", amountCents: payment.amountCents,
+                kind: .expense, date: payment.date, recurrenceKey: "preserved-card-payment:" + payment.id.uuidString))
+        }
+        for subscription in card.subscriptions { subscription.isActive = false; subscription.card = nil }
         context.delete(card)
         do { try context.save(); FinanceEvents.saved() } catch { context.rollback(); throw error }
     }

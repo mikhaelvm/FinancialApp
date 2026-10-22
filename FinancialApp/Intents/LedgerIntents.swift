@@ -101,7 +101,7 @@ struct ScheduleLedgerPaymentIntent: AppIntent {
         try ScheduledPaymentViewModel().save(context: context, title: title, amountText: Money.input(cents),
                                               dueDate: dueDate, notes: "", categoryID: category?.id)
         NotificationService.shared.refresh(context: context)
-        LedgerRouter.shared.selectedTab = .agenda
+        LedgerRouter.shared.openPayments()
         return .result(dialog: "A conta \(title) foi agendada no Ledger.")
     }
 }
@@ -111,7 +111,7 @@ struct OpenLedgerAgendaIntent: AppIntent {
     static var description = IntentDescription("Abre faturas, recorrências e contas a pagar no Ledger.")
     static var openAppWhenRun = true
     @MainActor func perform() async throws -> some IntentResult {
-        LedgerRouter.shared.selectedTab = .agenda
+        LedgerRouter.shared.openPayments()
         return .result()
     }
 }

@@ -6,6 +6,7 @@ struct CreditCardsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \CreditCard.name) private var cards: [CreditCard]
     @State private var showAdd = false
+    @State private var deleting: CreditCard?
     @State private var error: String?
     var body: some View {
         List {
@@ -42,11 +43,8 @@ struct CreditCardsView: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 4))
-                .swipeActions {
-                    Button("Excluir", role: .destructive) {
-                        do { try CreditCardViewModel().delete(context: context, card: card) }
-                        catch { self.error = error.localizedDescription }
-                    }
+                .swipeActions(allowsFullSwipe: false) {
+                    Button("Excluir", role: .destructive) { deleting = card }.tint(.red)
                 }
             }
         }
@@ -60,6 +58,15 @@ struct CreditCardsView: View {
         }
         .toolbar { LedgerToolbarButton("Adicionar cartão", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { CardFormView() }
+        .confirmationDialog("Excluir cartão?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
+            Button("Excluir cartão e compras", role: .destructive) {
+                if let deleting {
+                    do { try CreditCardViewModel().delete(context: context, card: deleting) }
+                    catch { self.error = error.localizedDescription }
+                }
+                deleting = nil
+            }
+        } message: { Text(CreditCardViewModel.deletionExplanation) }
         .financeError($error)
     }
 }
@@ -73,6 +80,7 @@ struct CardFormView: View {
     @State private var closingDay = 25
     @State private var dueDay = 5
     @State private var error: String?
+    @State private var confirmingDelete = false
     private enum Field: Hashable { case name, limit }
     @FocusState private var focusedField: Field?
     var body: some View {
@@ -85,7 +93,7 @@ struct CardFormView: View {
                         Text("Limite total").font(.caption).foregroundStyle(.secondary)
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("R$").foregroundStyle(.secondary)
-                            TextField("0,00", text: $limit).keyboardType(.decimalPad)
+                            TextField("0,00", text: $limit.bankCurrency).keyboardType(.numberPad)
                                 .focused($focusedField, equals: .limit).monospacedDigit()
                                 .accessibilityLabel("Limite total em reais")
                         }.font(.title2)
@@ -103,6 +111,11 @@ struct CardFormView: View {
                         Text("Alterações de dias valem para novas compras e projeções de assinaturas. Parcelas já lançadas mantêm as datas originais.")
                     }
                 }.font(.caption).foregroundStyle(.secondary)
+                if card != nil {
+                    Section {
+                        Button("Excluir cartão", role: .destructive) { confirmingDelete = true }.foregroundStyle(.red)
+                    } footer: { Text(CreditCardViewModel.deletionExplanation) }
+                }
             }
             .ledgerFormScreen(card == nil ? "Novo cartão" : "Editar cartão")
             .toolbar {
@@ -125,6 +138,13 @@ struct CardFormView: View {
                 if let card { name = card.name; limit = Money.input(card.limitCents); closingDay = card.closingDay; dueDay = card.dueDay }
             }
             .financeError($error)
+            .confirmationDialog("Excluir cartão?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button("Excluir cartão e compras", role: .destructive) {
+                    guard let card else { return }
+                    do { try CreditCardViewModel().delete(context: context, card: card); dismiss() }
+                    catch { self.error = error.localizedDescription }
+                }
+            } message: { Text(CreditCardViewModel.deletionExplanation) }
         }
     }
 }
