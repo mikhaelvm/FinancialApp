@@ -19,6 +19,7 @@ struct LedgerWidgetSnapshot: Codable {
     let hidesAmounts: Bool
     let budget: Int64
     let budgetSpent: Int64
+    var accessProtected: Bool? = nil
 }
 
 enum LedgerWidgetStore {

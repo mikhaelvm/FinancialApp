@@ -36,13 +36,7 @@ struct DashboardView: View {
                           systemImage: snapshot.projectedBalance < 0 ? "exclamationmark.circle" : "checkmark.circle")
                         .font(.footnote).foregroundStyle(snapshot.projectedBalance < 0 ? .orange : .secondary)
                 }.padding(.vertical, 12)
-                HStack {
-                    Button { entry = .expense } label: { Label("Despesa", systemImage: "minus.circle") }
-                    Spacer()
-                    Button { entry = .income } label: { Label("Receita", systemImage: "plus.circle") }
-                    Spacer()
-                    Button { entry = .scheduled } label: { Label("Agendar", systemImage: "calendar.badge.plus") }
-                }.font(.subheadline).buttonStyle(.borderless).padding(.vertical, 4)
+                LedgerDashboardActions(expense: { entry = .expense }, income: { entry = .income }, schedule: { entry = .scheduled })
             }
             Section(FinanceDate.monthTitle(.now).capitalized) {
                 MoneyRow(title: "Receitas", cents: snapshot.income, symbol: "arrow.down.left.circle", tint: .green)
@@ -55,6 +49,9 @@ struct DashboardView: View {
                 }
             }
             Section("Planejamento") {
+                NavigationLink { CashFlowReviewView() } label: {
+                    SpendingComparisonRow(comparison: FinancialReview.comparison(transactions: transactions, payments: payments))
+                }
                 NavigationLink { BudgetSettingsView() } label: {
                     BudgetProgressView(spentCents: snapshot.categories.reduce(0) { $0 + $1.cents }, budgetCents: Int64(budget))
                 }
@@ -112,17 +109,10 @@ struct DashboardView: View {
                 Text("O saldo muda quando o dinheiro entra ou sai da conta. Compras no cartão entram nas faturas. Previsões incluem compromissos registrados, sem presumir receitas futuras.")
             }
         }
-        .listStyle(.insetGrouped).navigationTitle("Resumo")
+        .ledgerListScreen("Resumo")
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button(hideAmounts ? "Mostrar valores" : "Ocultar valores", systemImage: hideAmounts ? "eye.slash" : "eye") { hideAmounts.toggle() }
-                Button("Ajustes", systemImage: "gearshape") { showSettings = true }
-                Menu {
-                    Button("Despesa", systemImage: "minus.circle") { entry = .expense }
-                    Button("Receita", systemImage: "plus.circle") { entry = .income }
-                    Button("Conta agendada", systemImage: "calendar") { entry = .scheduled }
-                    Button("Recorrência", systemImage: "repeat") { entry = .recurring }
-                } label: { Label("Adicionar", systemImage: "plus") }
+            ToolbarItem(placement: .topBarLeading) {
+                LedgerToolbarButton("Ajustes", systemImage: "gearshape") { showSettings = true }
             }
         }
         .sheet(item: $entry) { action in AddTransactionView(initialMode: action.mode, initialKind: action.kind) }

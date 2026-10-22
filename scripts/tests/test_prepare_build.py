@@ -48,6 +48,17 @@ class BuildSpecTests(unittest.TestCase):
         with open(root / 'Shared/Ledger.entitlements', 'rb') as stream:
             self.assertEqual(plistlib.load(stream)['com.apple.security.application-groups'], ['$(LEDGER_APP_GROUP)'])
 
+    def test_app_identity_and_face_id_permission_are_present(self):
+        import plistlib
+        root = Path(__file__).resolve().parents[2]
+        with open(root / 'FinancialApp/Info.plist', 'rb') as stream:
+            info = plistlib.load(stream)
+        self.assertEqual(info['CFBundleDisplayName'], 'Ledger')
+        self.assertEqual(info['CFBundleName'], 'Ledger')
+        self.assertTrue(info['NSFaceIDUsageDescription'].strip())
+        self.assertEqual(info['CFBundleExecutable'], '$(EXECUTABLE_NAME)')
+        self.assertIn('LocalAuthentication.framework', self.source)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -73,8 +73,7 @@ struct StatementImportView: View {
             }
             if let message { Section { Label(message, systemImage: "checkmark.circle").foregroundStyle(.green) } }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Importar extrato").navigationBarTitleDisplayMode(.inline)
+        .ledgerListScreen("Importar extrato", largeTitle: false)
         .disabled(isLoading)
         .overlay {
             if isLoading { ProgressView("Analisando extrato…").padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) }
@@ -174,7 +173,7 @@ struct StatementFilePicker: ViewModifier {
             .sheet(item: $selected) { file in
                 NavigationStack {
                     StatementImportView(fileURL: file.url)
-                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Concluir") { selected = nil } } }
+                        .toolbar { ToolbarItem(placement: .confirmationAction) { LedgerToolbarButton("Concluir", systemImage: "checkmark") { selected = nil } } }
                 }
             }
             .financeError($error)

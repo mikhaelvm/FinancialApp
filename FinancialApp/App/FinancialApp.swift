@@ -25,7 +25,7 @@ struct FinancialApp: App {
     var body: some Scene {
         WindowGroup {
             if let container {
-                RootView().modelContainer(container)
+                LedgerSecurityHost { RootView().modelContainer(container) }
                     .id(resetRevision)
                     .tint((LedgerAccent(rawValue: accent) ?? .teal).color)
                     .preferredColorScheme((LedgerAppearance(rawValue: appearance) ?? .system).colorScheme)

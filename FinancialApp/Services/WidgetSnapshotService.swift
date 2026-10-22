@@ -7,6 +7,13 @@ enum WidgetSnapshotService {
     static func refresh(context: ModelContext) {
         guard LedgerWidgetStore.isAvailable else { return }
         do {
+            if AppLockService.protectionEnabled {
+                try LedgerWidgetStore.write(LedgerWidgetSnapshot(updatedAt: .now, month: FinanceDate.month(.now),
+                    balance: 0, income: 0, expenses: 0, pendingInvoices: 0, projectedBalance: 0, upcoming: [],
+                    hidesAmounts: true, budget: 0, budgetSpent: 0, accessProtected: true))
+                WidgetCenter.shared.reloadAllTimelines()
+                return
+            }
             let transactions = try context.fetch(FetchDescriptor<Transaction>())
             let cards = try context.fetch(FetchDescriptor<CreditCard>())
             let subscriptions = try context.fetch(FetchDescriptor<Subscription>())

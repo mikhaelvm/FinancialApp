@@ -55,7 +55,7 @@ struct DataManagementView: View {
                 Text("Remove lançamentos, cartões, pagamentos, recorrências e categorias personalizadas, cancela os lembretes e restaura as preferências. Os arquivos de backup que você exportou não serão apagados.")
             }
         }
-        .navigationTitle("Dados e backup").navigationBarTitleDisplayMode(.inline)
+        .ledgerFormScreen("Dados e backup")
         .fileExporter(isPresented: $exporting, document: document, contentType: exportType,
                       defaultFilename: exportType == .json ? "Ledger-Backup" : "Ledger-Transacoes") { result in
             switch result {

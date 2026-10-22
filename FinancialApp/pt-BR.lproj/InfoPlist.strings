@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "Ledger";
+"CFBundleName" = "Ledger";
+"NSFaceIDUsageDescription" = "Use o Face ID para proteger o acesso às suas finanças no Ledger.";

@@ -2,7 +2,19 @@
 
 Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, sem CloudKit, servidor ou assinatura de sincronização. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
-## Versão 1.3
+## Versão 1.4
+
+- Bloqueio opcional por Face ID/Touch ID com alternativa pelo código do aparelho, autenticação para ativar/desativar e nova exigência após ir para segundo plano.
+- Proteção opaca acima dos modais na prévia do seletor de apps. Widgets e notificações ficam discretos com o bloqueio ativo; consultas financeiras dos App Intents respeitam a sessão.
+- Ações de Despesa/Receita/Agendar maiores, com fundos, bordas e símbolos destacados; adaptação para fontes de acessibilidade.
+- Listas e formulários com superfícies, cabeçalhos, espaçamento e ações de navegação compartilhados. Tab inicial e título usam Resumo.
+- Filtros no Extrato por natureza, período e categoria; opção Repetir lançamento abre uma nova cópia para revisar antes de salvar.
+- Evolução de entradas/saídas em seis meses e comparação de saídas até o mesmo dia do mês anterior. Compras no cartão não duplicam seus pagamentos de faturas nos totais da conta.
+- Nome interno e tradução do bundle corrigidos para Ledger; o botão oficial do Atalhos continua sendo utilizado.
+
+- Resumo com somente o botão de Ajustes à esquerda na barra de navegação; título grande que se recolhe ao rolar. Lançamentos continuam acessíveis nos atalhos do saldo e ocultação de valores nos Ajustes.
+- Nomes das categorias em cor primária do sistema (branco no modo escuro e preto no claro), preservando símbolos coloridos.
+- Botões de navegação dos modais usam X para cancelar e check para salvar/concluir, com rótulos de acessibilidade para VoiceOver.
 
 - Ícone nativo do Icon Composer em **todos os builds SDK 26+**, com fundo contínuo, escala original e sem refratividade, sombra ou reflexos extras. Os PNGs com acabamento pré-renderizado não são mais usados como ícone.
 - Interface baseada em listas agrupadas, cores semânticas, fontes do sistema e superfícies discretas. Resumo, cartões, recorrências e Agenda seguem Light/Dark Mode e Dynamic Type.
@@ -104,6 +116,25 @@ Assinaturas e contas recorrentes têm ciclos semanal/mensal/anual. O dia origina
 
 Referências: [WidgetKit](https://developer.apple.com/documentation/widgetkit), [Settings bundle](https://developer.apple.com/documentation/foundation/building-a-settings-bundle-for-your-app), [Siri searchInApp](https://developer.apple.com/documentation/appintents/appschema/systemintent/searchinapp).
 
+## Bloqueio por Face ID / Touch ID
+
+Abra **Ajustes → Privacidade e segurança → Bloquear com Face ID/Touch ID**. A opção permanece desligada até uma autenticação bem-sucedida. Desativar também pede autenticação. É necessário configurar o código do aparelho; o iOS oferece esse código como alternativa quando a biometria não está disponível.
+
+O Ledger bloqueia no início de uma nova sessão e após ir para segundo plano. Abrir notificações, widgets, links e controles não evita a proteção. A prévia no seletor de apps é coberta por uma janela opaca da cena, acima inclusive de formulários e alertas; os campos em edição permanecem montados. Cancelar a autenticação mantém o bloqueio e permite tentar novamente pelo botão, sem repetir prompts em ciclo. Solicitações antigas não podem liberar a sessão após ela ter sido bloqueada novamente.
+
+Com a opção ativa, novos resumos compartilhados dos widgets não contêm valores nem descrições financeiras, e notificações usam título Ledger e texto genérico. A atualização de widgets segue os prazos do sistema. Atalhos que consultam ou alteram dados e consultas de entidades recusam acesso enquanto a sessão está bloqueada; abra/desbloqueie o Ledger antes de executá-los. As ações que apenas abrem telas continuam encaminhando à interface protegida.
+
+Este recurso controla o acesso à interface e às ações do app. Não adiciona criptografia própria ao banco ou senha aos backups JSON exportados. As permissões de biometria e o código são gerenciados pelo iOS; o Ledger não recebe dados biométricos nem armazena o código. A redefinição completa do app desliga a preferência de bloqueio.
+
+Referências: [LocalAuthentication — Apple](https://developer.apple.com/documentation/localauthentication/logging-a-user-into-your-app-with-face-id-or-touch-id), [biometria ou código do aparelho](https://developer.apple.com/documentation/localauthentication/lapolicy/deviceownerauthentication), [ShortcutsLink nativo](https://developer.apple.com/documentation/appintents/shortcutslink).
+
+## Filtros, repetição e evolução
+
+- No **Extrato**, combine natureza, período, categoria e busca. Pagamentos de faturas seguem o período e a busca e aparecem em despesas/todos; não possuem categoria de despesa e são ocultados quando uma categoria é selecionada. **Limpar filtros** restaura a visão completa.
+- Mantenha um lançamento pressionado e escolha **Repetir lançamento**. A cópia usa a data de hoje e abre para revisão; só salvar cria um registro. Identificadores bancários, vínculos de assinaturas e parcelas não são transferidos para o novo lançamento à vista.
+- Em **Resumo → Planejamento**, toque na comparação de saídas para abrir **Evolução da conta**. Também há acesso nos Relatórios. O gráfico usa apenas entradas/saídas registradas e pagamentos efetivamente realizados, até hoje, sem incluir compras no cartão duas vezes.
+- A comparação no Resumo usa o dia atual como corte nos dois meses (limitado ao último dia quando o mês anterior é mais curto). Sem saídas no período anterior, não inventa uma porcentagem. A opção de ocultação também protege os gráficos e comparações.
+
 ## App Groups e assinatura dos widgets
 
 O identificador padrão é `group.com.mikhael.FinancialApp`, configurado em `LEDGER_APP_GROUP` no `project.yml`, nos dois Info.plist e em `Shared/Ledger.entitlements`. O grupo deve ser registrado/autorizado para a sua equipe e incluído nos perfis do app e da extensão. Se o identificador não estiver disponível para sua equipe, altere **LEDGER_APP_GROUP** e registre outro grupo. Isso não altera o bundle identifier nem o banco principal.
@@ -164,8 +195,17 @@ Shared/Ledger.entitlements
 LedgerWidgets/LedgerControls.swift
 Tests/PDFStatementTests.swift
 Tests/ResetAndAgendaTests.swift
+FinancialApp/Services/AppLockService.swift
+FinancialApp/Services/FinancialReview.swift
+FinancialApp/Views/LedgerSecurityHost.swift
+FinancialApp/Views/CashFlowReviewView.swift
+FinancialApp/pt-BR.lproj/InfoPlist.strings
+Tests/AppLockTests.swift
+Tests/FinancialReviewTests.swift
 ```
 
-Há **49 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também cinco testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As novas verificações nativas cobrem PDF, exclusão de pagamentos, redefinição e aparência das categorias.
+Há **59 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
+
+Na validação em aparelho desta versão, confira Face ID/Touch ID, alternativa por código, cancelamento/repetição do prompt, bloqueio ao trocar de app com um formulário aberto, prévia do seletor de apps e abertura pelos widgets/controles. Os testes com autenticador simulado verificam a lógica da sessão, não o sensor físico nem o desenho das janelas pelo iOS. A correção do nome no Atalhos depende da instalação da nova versão e da atualização dos metadados pelo sistema.

@@ -101,9 +101,8 @@ struct PaymentAgendaView: View {
                 Text("Previsão dos próximos 60 dias. Cobranças no cartão aparecem junto à fatura, mas não aumentam o total de saídas da conta novamente. Assinaturas na conta são lançadas automaticamente na data de renovação.")
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Agenda")
-        .toolbar { Button("Agendar pagamento", systemImage: "plus") { showAdd = true } }
+        .ledgerListScreen("Agenda")
+        .toolbar { LedgerToolbarButton("Agendar pagamento", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { ScheduledPaymentForm() }
         .sheet(item: $editing) { ScheduledPaymentForm(payment: $0) }
         .sheet(isPresented: $showSettings) { NavigationStack { LedgerSettingsView() } }
@@ -180,12 +179,11 @@ struct ScheduledPaymentForm: View {
                     Section { Button("Excluir agendamento", role: .destructive) { confirmDelete = true }.foregroundStyle(.red) }
                 }
             }
-            .navigationTitle(payment == nil ? "Agendar conta" : "Editar conta")
-            .navigationBarTitleDisplayMode(.inline)
+            .ledgerFormScreen(payment == nil ? "Agendar conta" : "Editar conta")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { LedgerToolbarButton("Cancelar", systemImage: "xmark") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salvar") {
+                    LedgerToolbarButton("Salvar", systemImage: "checkmark") {
                         do {
                             try ScheduledPaymentViewModel().save(context: context, payment: payment, title: title,
                                                                  amountText: amount, dueDate: dueDate, notes: notes, categoryID: categoryID)

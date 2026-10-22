@@ -27,7 +27,12 @@ private struct LedgerDashboardWidgetView: View {
     let entry: LedgerEntry
     var body: some View {
         Group {
-            if let snapshot = entry.snapshot {
+            if entry.snapshot?.accessProtected == true {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Ledger", systemImage: "lock.shield").font(.headline)
+                    Text("Desbloqueie no app").font(.caption).foregroundStyle(.secondary)
+                }
+            } else if let snapshot = entry.snapshot {
                 dashboard(snapshot)
             } else {
                 VStack(alignment: .leading, spacing: 8) {

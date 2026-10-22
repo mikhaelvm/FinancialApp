@@ -12,6 +12,7 @@ enum LedgerIntentSupport {
         return cents
     }
     @MainActor static func context() throws -> ModelContext {
+        try AppLockService.shared.requireUnlockedAccess()
         let context = try Persistence.sharedContainer().mainContext
         try Persistence.seed(context: context)
         try RecurrenceEngine().synchronize(context: context)

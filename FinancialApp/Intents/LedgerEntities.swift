@@ -23,6 +23,7 @@ struct LedgerCategoryQuery: EntityStringQuery {
         try categories().map { LedgerCategoryEntity(category: $0) }
     }
     @MainActor private func categories() throws -> [Category] {
+        try AppLockService.shared.requireUnlockedAccess()
         let context = try Persistence.sharedContainer().mainContext
         try Persistence.seed(context: context)
         return try context.fetch(FetchDescriptor<Category>(sortBy: [SortDescriptor(\Category.name)]))
@@ -57,6 +58,7 @@ struct LedgerTransactionQuery: EntityStringQuery {
         try transactions().prefix(10).map { LedgerTransactionEntity(transaction: $0) }
     }
     @MainActor private func transactions() throws -> [Transaction] {
+        try AppLockService.shared.requireUnlockedAccess()
         // The search UI represents cash entries. Card purchases remain in their invoice detail.
         let descriptor = FetchDescriptor<Transaction>(predicate: #Predicate { $0.card == nil },
                                                        sortBy: [SortDescriptor(\Transaction.date, order: .reverse)])

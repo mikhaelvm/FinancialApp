@@ -19,6 +19,7 @@ struct AddTransactionView: View {
     var initialCard: CreditCard? = nil
     var initialMode: EntryMode = .single
     var initialKind: TransactionKind = .expense
+    var draft: LedgerTransactionDraft? = nil
     @State private var mode: EntryMode = .single
     @State private var title = ""
     @State private var amount = ""
@@ -40,6 +41,7 @@ struct AddTransactionView: View {
         NavigationStack {
             Form {
                 Section {
+                    if draft != nil { Label("Revise a cópia antes de registrar o novo lançamento.", systemImage: "doc.on.doc").font(.footnote).foregroundStyle(.secondary) }
                     if subscription == nil {
                         Picker("Tipo de lançamento", selection: $kind) {
                             Label("Despesa", systemImage: "minus.circle.fill").tag(TransactionKind.expense)
@@ -118,17 +120,16 @@ struct AddTransactionView: View {
                     }
                 }
             }
-            .navigationTitle(isEditing ? "Editar lançamento" : (kind == .income ? "Nova receita" : "Nova despesa"))
-            .navigationBarTitleDisplayMode(.inline)
+            .ledgerFormScreen(isEditing ? "Editar lançamento" : (kind == .income ? "Nova receita" : "Nova despesa"))
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { LedgerToolbarButton("Cancelar", systemImage: "xmark") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? "Salvar" : "Adicionar", action: save).fontWeight(.semibold)
+                    LedgerToolbarButton(isEditing ? "Salvar" : "Adicionar", systemImage: "checkmark", action: save).fontWeight(.semibold)
                         .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || Money.parse(amount) == nil)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Concluir") { amountFocused = false }
+                    LedgerToolbarButton("Concluir", systemImage: "checkmark") { amountFocused = false }
                 }
             }
             .onAppear(perform: load)
@@ -151,6 +152,10 @@ struct AddTransactionView: View {
         mode = initialMode
         kind = initialKind
         cardID = initialCard?.id
+        if let draft {
+            title = draft.title; amount = Money.input(draft.amountCents); kind = draft.kind; categoryID = draft.categoryID
+            date = .now; mode = .single; cardID = nil
+        }
         if let transaction {
             title = transaction.title; amount = Money.input(transaction.amountCents)
             date = transaction.date; kind = transaction.kind; categoryID = transaction.category?.id

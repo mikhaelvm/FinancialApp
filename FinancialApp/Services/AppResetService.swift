@@ -26,6 +26,7 @@ enum AppResetService {
             defaults.removeObject(forKey: key)
         }
         LedgerThemeState.shared.refresh()
+        if defaults === UserDefaults.standard { AppLockService.shared.resetAfterDataErase() }
         LedgerRouter.shared.reset()
         NotificationService.shared.reset(context: context)
         try? LedgerWidgetStore.clear()

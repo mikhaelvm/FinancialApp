@@ -119,12 +119,11 @@ struct CreditCardDetailView: View {
                 Text("Barras incluem assinaturas previstas. O comprometimento acumulado considera somente compras já lançadas e supõe quitação das faturas anteriores.")
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle(card.name)
+        .ledgerListScreen(card.name, largeTitle: false)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button("Editar cartão", systemImage: "pencil") { showEdit = true }
-                Button("Adicionar compra", systemImage: "plus") { showPurchase = true }
+                LedgerToolbarButton("Editar cartão", systemImage: "pencil") { showEdit = true }
+                LedgerToolbarButton("Adicionar compra", systemImage: "plus") { showPurchase = true }
             }
         }
         .sheet(isPresented: $showEdit) { CardFormView(card: card) }

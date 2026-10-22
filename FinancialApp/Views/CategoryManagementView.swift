@@ -12,16 +12,16 @@ struct CategoryManagementView: View {
                     Button { selected = category } label: {
                         HStack {
                             SymbolTile(symbol: category.symbol, tint: category.color)
-                            Text(category.name).foregroundStyle(.primary)
+                            Text(category.name).foregroundStyle(Color.primary)
                             Spacer()
                             Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
                         }.padding(.vertical, 3)
-                    }
+                    }.buttonStyle(.plain)
                 }
             } footer: { Text("Personalize símbolos e cores ou crie categorias para organizar seus lançamentos.") }
         }
-        .navigationTitle("Categorias").navigationBarTitleDisplayMode(.inline)
-        .toolbar { Button("Nova categoria", systemImage: "plus") { adding = true } }
+        .ledgerListScreen("Categorias", largeTitle: false)
+        .toolbar { LedgerToolbarButton("Nova categoria", systemImage: "plus") { adding = true } }
         .sheet(isPresented: $adding) { CategoryForm() }
         .sheet(item: $selected) { CategoryForm(category: $0) }
     }
@@ -69,10 +69,10 @@ private struct CategoryForm: View {
                     }
                 }
             }
-            .navigationTitle(category == nil ? "Nova categoria" : "Editar categoria").navigationBarTitleDisplayMode(.inline)
+            .ledgerFormScreen(category == nil ? "Nova categoria" : "Editar categoria")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Salvar") { save() }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+                ToolbarItem(placement: .cancellationAction) { LedgerToolbarButton("Cancelar", systemImage: "xmark") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { LedgerToolbarButton("Salvar", systemImage: "checkmark") { save() }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
             }
             .onAppear { if let category { name = category.name; symbol = category.symbol; color = category.colorName } }
             .financeError($error)

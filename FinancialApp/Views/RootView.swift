@@ -12,7 +12,7 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $router.selectedTab) {
             NavigationStack { DashboardView() }
-                .tabItem { Label("Início", systemImage: "square.grid.2x2.fill") }.tag(LedgerTab.dashboard)
+                .tabItem { Label("Resumo", systemImage: "chart.pie.fill") }.tag(LedgerTab.dashboard)
             NavigationStack { TransactionsView() }
                 .tabItem { Label("Extrato", systemImage: "list.bullet.rectangle") }.tag(LedgerTab.transactions)
             NavigationStack(path: $router.cardPath) { CreditCardsView() }

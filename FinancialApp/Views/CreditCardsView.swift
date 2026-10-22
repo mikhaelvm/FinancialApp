@@ -37,8 +37,8 @@ struct CreditCardsView: View {
                             Text("Fecha \(card.closingDay) • Vence \(card.dueDay)")
                         }.font(.caption).foregroundStyle(.secondary)
                     }
-                    .foregroundStyle(.primary).padding(20)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                    .foregroundStyle(Color.primary).padding(20)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: LedgerTheme.cornerRadius))
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 4))
@@ -50,8 +50,7 @@ struct CreditCardsView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Cartões")
+        .ledgerListScreen("Cartões")
         .navigationDestination(for: UUID.self) { id in
             if let card = cards.first(where: { $0.id == id }) {
                 CreditCardDetailView(card: card)
@@ -59,7 +58,7 @@ struct CreditCardsView: View {
                 ContentUnavailableView("Cartão não encontrado", systemImage: "creditcard")
             }
         }
-        .toolbar { Button("Adicionar cartão", systemImage: "plus") { showAdd = true } }
+        .toolbar { LedgerToolbarButton("Adicionar cartão", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { CardFormView() }
         .financeError($error)
     }
@@ -94,12 +93,11 @@ struct CardFormView: View {
                     }
                 }.font(.caption).foregroundStyle(.secondary)
             }
-            .navigationTitle(card == nil ? "Novo cartão" : "Editar cartão")
-            .navigationBarTitleDisplayMode(.inline)
+            .ledgerFormScreen(card == nil ? "Novo cartão" : "Editar cartão")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { LedgerToolbarButton("Cancelar", systemImage: "xmark") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Salvar") {
+                    LedgerToolbarButton("Salvar", systemImage: "checkmark") {
                         do {
                             try CreditCardViewModel().save(context: context, card: card, name: name,
                                                           limitText: limit, closingDay: closingDay, dueDay: dueDay)

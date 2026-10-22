@@ -40,7 +40,8 @@ struct ReportsView: View {
             } header: { Text("Despesas por categoria") } footer: {
                 Text("Gastos na conta e parcelas por vencimento. Para meses futuros, valores de assinaturas são previsões. O resultado da conta usa apenas movimentos realizados.")
             }
+            NavigationLink { CashFlowReviewView() } label: { Label("Evolução da conta em seis meses", systemImage: "chart.bar.xaxis") }
             NavigationLink { DataManagementView() } label: { Label("Exportar dados", systemImage: "square.and.arrow.up") }
-        }.listStyle(.insetGrouped).navigationTitle("Relatórios").navigationBarTitleDisplayMode(.inline)
+        }.ledgerListScreen("Relatórios", largeTitle: false)
     }
 }

@@ -1,5 +1,24 @@
 import SwiftUI
 
+/// Icon-only presentation with a meaningful VoiceOver label.
+struct LedgerToolbarButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    init(_ title: String, systemImage: String, action: @escaping () -> Void) {
+        self.title = title
+        self.systemImage = systemImage
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) { Label(title, systemImage: systemImage) }
+            .labelStyle(.iconOnly)
+            .accessibilityLabel(Text(title))
+    }
+}
+
 struct MoneyRow: View {
     @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     let title: String

@@ -50,7 +50,7 @@ struct SubscriptionsView: View {
                                         .font(.caption)
                                 }
                             } icon: { Image(systemName: "bell.badge.fill").foregroundStyle(.orange) }
-                        }
+                        }.buttonStyle(.plain)
                     }
                 }
             }
@@ -83,7 +83,7 @@ struct SubscriptionsView: View {
                         })).font(.caption)
                     }
                     .swipeActions {
-                        Button("Excluir", role: .destructive) { deleting = subscription }
+                        Button("Excluir", role: .destructive) { deleting = subscription }.tint(.red)
                         Button("Editar") { editing = subscription }.tint(.blue)
                     }
                 }
@@ -91,10 +91,9 @@ struct SubscriptionsView: View {
                 Text("Média: mensal = valor; anual ÷ 12; semanal × 52 ÷ 12. Pausar no Ledger interrompe os lançamentos futuros e os alertas; não cancela sua contratação com o serviço.")
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Recorrentes")
+        .ledgerListScreen("Recorrentes")
         .searchable(text: $search, prompt: "Buscar serviço ou conta")
-        .toolbar { Button("Adicionar assinatura", systemImage: "plus") { showAdd = true } }
+        .toolbar { LedgerToolbarButton("Adicionar assinatura", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { AddTransactionView(initialMode: .subscription) }
         .sheet(item: $editing) { AddTransactionView(subscription: $0) }
         .confirmationDialog("Excluir assinatura?", isPresented: Binding(

@@ -53,7 +53,7 @@ struct BudgetSettingsView: View {
             }
             if saved { Label("Planejamento salvo", systemImage: "checkmark.circle").foregroundStyle(.green) }
         }
-        .navigationTitle("Planejamento").navigationBarTitleDisplayMode(.inline)
+        .ledgerFormScreen("Planejamento")
         .onAppear {
             budgetText = budget > 0 ? Money.input(Int64(budget)) : ""
             goalText = goal > 0 ? Money.input(Int64(goal)) : ""

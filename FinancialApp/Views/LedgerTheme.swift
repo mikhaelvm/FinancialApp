@@ -4,20 +4,36 @@ import SwiftUI
     static var accent: Color {
         LedgerThemeState.shared.accent.color
     }
-    static let navy = Color(red: 0.04, green: 0.10, blue: 0.19)
-    static let teal = Color(red: 0.04, green: 0.40, blue: 0.43)
-    static let hero = LinearGradient(colors: [teal, navy], startPoint: .topLeading, endPoint: .bottomTrailing)
+    static let cornerRadius: CGFloat = 18
+    static let rowSpacing: CGFloat = 12
+    static let income: Color = .green
+    static let expense: Color = .orange
 }
 
 struct LedgerSurface: ViewModifier {
     func body(content: Content) -> some View {
         content.padding(16)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: LedgerTheme.cornerRadius))
     }
 }
 
 extension View {
     func ledgerSurface() -> some View { modifier(LedgerSurface()) }
+    func ledgerListScreen(_ title: String, largeTitle: Bool = true) -> some View {
+        self.listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color(uiColor: .systemGroupedBackground))
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(largeTitle ? .large : .inline)
+    }
+    func ledgerFormScreen(_ title: String) -> some View {
+        self.formStyle(.grouped)
+            .scrollContentBackground(.hidden)
+            .background(Color(uiColor: .systemGroupedBackground))
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+    }
 }
 
 struct SymbolTile: View {
@@ -40,13 +56,61 @@ struct LedgerSummaryHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label(eyebrow, systemImage: symbol).font(.subheadline.weight(.medium)).foregroundStyle(.secondary)
-            Text(hideAmounts ? "••••" : title).font(.largeTitle.bold()).monospacedDigit().foregroundStyle(.primary)
+            Text(hideAmounts ? "••••" : title).font(.system(.largeTitle, design: .rounded).weight(.semibold)).monospacedDigit().foregroundStyle(Color.primary)
                 .minimumScaleFactor(0.7)
             Text(hideAmounts ? "Valores ocultos" : subtitle).font(.subheadline).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(20)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: LedgerTheme.cornerRadius))
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct LedgerActionTile: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    let title: String
+    let symbol: String
+    let tint: Color
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(HStackLayout(spacing: 12)) : AnyLayout(VStackLayout(spacing: 10))
+            layout {
+                Image(systemName: symbol).font(.title2.weight(.semibold)).foregroundStyle(tint)
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Color.primary)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1).minimumScaleFactor(0.85)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 16)
+            .frame(maxWidth: .infinity, minHeight: typeSize.isAccessibilitySize ? 56 : 88)
+            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: LedgerTheme.cornerRadius))
+            .overlay { RoundedRectangle(cornerRadius: LedgerTheme.cornerRadius).strokeBorder(tint.opacity(0.25), lineWidth: 1) }
+            .contentShape(RoundedRectangle(cornerRadius: LedgerTheme.cornerRadius))
+        }.buttonStyle(LedgerTileButtonStyle()).accessibilityElement(children: .combine)
+    }
+}
+
+private struct LedgerTileButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.78 : 1)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+struct LedgerDashboardActions: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    let expense: () -> Void
+    let income: () -> Void
+    let schedule: () -> Void
+    var body: some View {
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
+        layout {
+            LedgerActionTile(title: "Despesa", symbol: "minus.circle.fill", tint: LedgerTheme.expense, action: expense)
+            LedgerActionTile(title: "Receita", symbol: "plus.circle.fill", tint: LedgerTheme.income, action: income)
+            LedgerActionTile(title: "Agendar", symbol: "calendar.badge.plus", tint: LedgerTheme.accent, action: schedule)
+        }.padding(.vertical, 6)
     }
 }
 

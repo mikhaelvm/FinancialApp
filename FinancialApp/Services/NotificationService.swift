@@ -74,14 +74,15 @@ final class NotificationService {
             center.removePendingNotificationRequests(withIdentifiers: ownedIDs.filter { !desiredIDs.contains($0) })
             let existing = Dictionary(pending.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
             var completed = 0
+            let protected = AppLockService.protectionEnabled
             for reminder in reminders {
                 guard revision == resetRevision else { return }
                 let content = UNMutableNotificationContent()
-                content.title = reminder.commitment.title
+                content.title = protected ? "Ledger" : reminder.commitment.title
                 let when = reminder.daysBefore == 0 ? "hoje" : (reminder.daysBefore == 1 ? "amanhã" : "em \(reminder.daysBefore) dias")
                 let event = reminder.commitment.kind == .subscription ? "Renovação" : "Vencimento"
                 let amount = preferences.showAmounts ? " • \(Money.format(reminder.commitment.amountCents))" : ""
-                content.body = "\(event) \(when)\(amount). Abra o Ledger para conferir."
+                content.body = protected ? "Você tem um compromisso financeiro \(when). Desbloqueie o Ledger para conferir." : "\(event) \(when)\(amount). Abra o Ledger para conferir."
                 content.sound = .default
                 content.threadIdentifier = "ledger.payments"
                 content.userInfo = ["kind": reminder.commitment.kind.rawValue,
