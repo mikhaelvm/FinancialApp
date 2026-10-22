@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct SubscriptionsView: View {
+    @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     @Environment(\.modelContext) private var context
     @Query(sort: \Subscription.nextRenewalDate) private var subscriptions: [Subscription]
     @State private var viewModel = SubscriptionViewModel()
@@ -45,7 +46,7 @@ struct SubscriptionsView: View {
                             Label {
                                 VStack(alignment: .leading) {
                                     Text(subscription.title)
-                                    Text("\(Money.format(subscription.amountCents)) • \(subscription.nextRenewalDate.formatted(date: .abbreviated, time: .omitted))")
+                                    Text("\(hideAmounts ? "••••" : Money.format(subscription.amountCents)) • \(subscription.nextRenewalDate.formatted(date: .abbreviated, time: .omitted))")
                                         .font(.caption)
                                 }
                             } icon: { Image(systemName: "bell.badge.fill").foregroundStyle(.orange) }
@@ -71,7 +72,7 @@ struct SubscriptionsView: View {
                                 }
                                 Spacer(minLength: 4)
                                 VStack(alignment: .trailing, spacing: 4) {
-                                    Text(Money.format(subscription.amountCents)).font(.subheadline.bold()).monospacedDigit()
+                                    Text(hideAmounts ? "••••" : Money.format(subscription.amountCents)).font(.subheadline.bold()).monospacedDigit()
                                     Text(subscription.cycle.title.lowercased()).font(.caption).foregroundStyle(.secondary)
                                 }
                             }

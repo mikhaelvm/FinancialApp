@@ -24,7 +24,7 @@ struct TransactionsView: View {
                                            description: Text("Adicione receitas e despesas. Para saldo inicial, registre uma receita."))
                 }
                 ForEach(cash) { transaction in
-                    let managed = transaction.recurrenceKey != nil || scheduled.contains { $0.paidTransactionID == transaction.id }
+                    let managed = transaction.isAutomaticRecurrence || scheduled.contains { $0.paidTransactionID == transaction.id }
                     Button { if managed { viewing = transaction } else { editing = transaction } } label: {
                         LedgerTransactionRow(transaction: transaction, managed: managed)
                     }.buttonStyle(.plain)
@@ -51,7 +51,12 @@ struct TransactionsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Extrato")
         .searchable(text: Binding(get: { router.searchTerm }, set: { router.searchTerm = $0 }), prompt: "Buscar no extrato")
-        .toolbar { Button("Adicionar", systemImage: "plus") { showAdd = true } }
+        .toolbar {
+            Menu {
+                Button("Novo lançamento", systemImage: "plus") { showAdd = true }
+                NavigationLink { StatementImportView() } label: { Label("Importar extrato", systemImage: "square.and.arrow.down") }
+            } label: { Label("Ações do extrato", systemImage: "ellipsis.circle") }
+        }
         .sheet(isPresented: $showAdd) { AddTransactionView() }
         .sheet(item: $editing) { AddTransactionView(transaction: $0) }
         .sheet(item: $viewing) { LedgerTransactionDetailView(transaction: $0) }
@@ -78,6 +83,7 @@ struct TransactionsView: View {
 }
 
 private struct LedgerTransactionRow: View {
+    @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     let transaction: Transaction
     let managed: Bool
     var body: some View {
@@ -89,9 +95,10 @@ private struct LedgerTransactionRow: View {
                 Text("\(transaction.category?.name ?? "Sem categoria") • \(transaction.date.formatted(date: .abbreviated, time: .omitted))")
                     .font(.caption).foregroundStyle(.secondary)
                 if managed { Label("Lançamento automático", systemImage: "checkmark.seal").font(.caption2).foregroundStyle(.secondary) }
+                if transaction.isImportedStatement { Label("Extrato bancário", systemImage: "building.columns").font(.caption2).foregroundStyle(.secondary) }
             }
             Spacer(minLength: 4)
-            Text("\(transaction.kind == .income ? "+" : "−") \(Money.format(transaction.amountCents))")
+            Text(hideAmounts ? "••••" : "\(transaction.kind == .income ? "+" : "−") \(Money.format(transaction.amountCents))")
                 .font(.subheadline.weight(.semibold)).monospacedDigit()
                 .foregroundStyle(transaction.kind == .income ? LedgerTheme.accent : .primary)
         }.padding(.vertical, 5).accessibilityElement(children: .combine)

@@ -13,9 +13,19 @@ enum Money {
         let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "R$", with: "")
             .replacingOccurrences(of: " ", with: "")
-        // Entry uses Brazilian notation: 1.234,56 (or an integer).
-        let normalized = cleaned.replacingOccurrences(of: ".", with: "")
-            .replacingOccurrences(of: ",", with: ".")
+        // Brazilian notation, with decimal-point keyboards also accepted. A point
+        // with one or two trailing digits is decimal, not a thousands separator.
+        let normalized: String
+        if cleaned.contains(",") {
+            normalized = cleaned.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: ".")
+        } else {
+            let groups = cleaned.components(separatedBy: ".")
+            if groups.count == 2 && (1...2).contains(groups[1].count) { normalized = cleaned }
+            else if groups.count > 1 {
+                guard (1...3).contains(groups[0].count), groups.dropFirst().allSatisfy({ $0.count == 3 }) else { return nil }
+                normalized = groups.joined()
+            } else { normalized = cleaned }
+        }
         guard normalized.range(of: #"^\d+(\.\d{1,2})?$"#, options: .regularExpression) != nil,
               let decimal = Decimal(string: normalized, locale: Locale(identifier: "en_US_POSIX")),
               decimal > 0, decimal <= Decimal(maximumCents) / 100 else { return nil }

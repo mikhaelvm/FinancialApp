@@ -7,6 +7,8 @@ import AppIntents
 struct FinancialApp: App {
     private let container: ModelContainer?
     private let startupError: String?
+    @AppStorage("ledger.appearance") private var appearance = "system"
+    @AppStorage("ledger.accent") private var accent = "teal"
 
     init() {
         UNUserNotificationCenter.current().delegate = LedgerNotificationDelegate.shared
@@ -22,7 +24,9 @@ struct FinancialApp: App {
     var body: some Scene {
         WindowGroup {
             if let container {
-                RootView().modelContainer(container).tint(LedgerTheme.accent)
+                RootView().modelContainer(container)
+                    .tint((LedgerAccent(rawValue: accent) ?? .teal).color)
+                    .preferredColorScheme((LedgerAppearance(rawValue: appearance) ?? .system).colorScheme)
             } else {
                 ContentUnavailableView {
                     Label("Não foi possível abrir os dados", systemImage: "externaldrive.badge.exclamationmark")

@@ -13,18 +13,43 @@ struct LedgerSettingsView: View {
     @AppStorage("reminders.minute") private var minute = 0
     @AppStorage("reminders.showAmounts") private var showAmounts = false
     @State private var notifications = NotificationService.shared
+    @AppStorage("ledger.appearance") private var appearance = "system"
+    @AppStorage("ledger.accent") private var accent = "teal"
+    @AppStorage("ledger.hideAmounts") private var hideAmounts = false
 
     var body: some View {
         Form {
             Section {
                 HStack(spacing: 14) {
-                    Image("LedgerMark").resizable().scaledToFit().frame(width: 60, height: 60)
+                    SymbolTile(symbol: "square.3.layers.3d")
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Ledger").font(.title2.bold())
-                        Text("Seu dinheiro, com clareza.").font(.subheadline).foregroundStyle(.secondary)
+                        Text("Finanças pessoais").font(.subheadline).foregroundStyle(.secondary)
                     }
                 }.padding(.vertical, 6)
             }
+            Section("Personalização") {
+                Picker("Aparência", selection: $appearance) {
+                    ForEach(LedgerAppearance.allCases) { Text($0.title).tag($0.rawValue) }
+                }
+                Picker("Cor de destaque", selection: $accent) {
+                    ForEach(LedgerAccent.allCases) { value in
+                        Label { Text(value.title) } icon: { Image(systemName: "circle.fill").foregroundStyle(value.color) }.tag(value.rawValue)
+                    }
+                }
+                Toggle("Ocultar valores no resumo e listas", isOn: $hideAmounts)
+            }
+            Section("Organização e dados") {
+                NavigationLink { BudgetSettingsView() } label: { Label("Orçamento e meta de reserva", systemImage: "target") }
+                NavigationLink { CategoryManagementView() } label: { Label("Categorias", systemImage: "tag") }
+                NavigationLink { ReportsView() } label: { Label("Relatórios", systemImage: "chart.bar.xaxis") }
+                NavigationLink { DataManagementView() } label: { Label("Dados, backup e extratos", systemImage: "externaldrive") }
+            }
+            Section {
+                Label("Acesso rápido na Tela de Início", systemImage: "square.grid.2x2")
+                Text("Mantenha uma área vazia da Tela de Início pressionada, toque em Editar e adicione o widget Ledger. Também há controles para a Tela Bloqueada. Os widgets abrem receitas, despesas e Agenda, sem expor valores financeiros.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            } header: { Text("Widgets") }
             Section {
                 Toggle("Lembretes de pagamento", isOn: Binding(get: { enabled }, set: { value in
                     if value { Task { await notifications.requestPermission(context: context) } }
@@ -71,12 +96,12 @@ struct LedgerSettingsView: View {
                 Text("No app Atalhos, procure Ledger para combinar ações e criar automações. Valores são em reais. Registros por voz exigem o aparelho desbloqueado. No iOS 27, builds com SDK 27 também oferecem busca integrada à Siri AI; as ações financeiras usam App Shortcuts.")
             }
             Section("Sobre") {
-                LabeledContent("Versão", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1")
+                LabeledContent("Versão", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.2")
                 Text("Seus registros ficam neste dispositivo. Registrar um pagamento no Ledger não movimenta dinheiro no banco.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         }
-        .navigationTitle("Preferências")
+        .navigationTitle("Ajustes")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Concluir") { dismiss() } } }
         .onAppear { notifications.refresh(context: context) }
@@ -85,5 +110,6 @@ struct LedgerSettingsView: View {
         .onChange(of: hour) { _, _ in notifications.refresh(context: context) }
         .onChange(of: minute) { _, _ in notifications.refresh(context: context) }
         .onChange(of: showAmounts) { _, _ in notifications.refresh(context: context) }
+        .onChange(of: accent) { _, _ in LedgerThemeState.shared.refresh() }
     }
 }

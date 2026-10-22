@@ -14,13 +14,9 @@ def prepare_spec(source: str, sdk_major: int) -> str:
         marker = "    SWIFT_VERSION: '5.0'"
         assert source.count(marker) == 1, "Swift language setting changed; update prepare_build.py"
         return source.replace(marker, marker + '\n    SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) LEDGER_SIRI_AI"')
-    icon_marker = "        ASSETCATALOG_COMPILER_APPICON_NAME: Ledger"
-    source_marker = "        excludes: [Info.plist]"
-    assert source.count(icon_marker) == 1 and source.count(source_marker) == 1, "Project source structure changed"
-    return source.replace(icon_marker, icon_marker + "Fallback").replace(
-        source_marker,
-        "        excludes: [Info.plist, Ledger.icon]\n      - path: Resources/LegacyIcon.xcassets",
-    )
+    # The corrected .icon uses only SDK 26 features. Never reuse the pre-rendered
+    # PNGs: their transparent corners/baked highlights caused the double frame.
+    return source
 
 
 def main() -> None:
@@ -35,7 +31,7 @@ def main() -> None:
     if output.resolve() != root / "project-ci.yml":
         raise ValueError("The generated spec must be project-ci.yml in the repository root.")
     output.write_text(spec, encoding="utf-8")
-    mode = "native Icon Composer + Siri AI search" if sdk_major >= 27 else "exported icon + App Shortcuts (SDK 26 compatibility)"
+    mode = "native icon + Siri AI search" if sdk_major >= 27 else "native icon + App Shortcuts (SDK 26)"
     print(f"Ledger: {mode}")
 
 

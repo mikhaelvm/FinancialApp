@@ -16,12 +16,21 @@ class BuildSpecTests(unittest.TestCase):
         self.assertIn("ASSETCATALOG_COMPILER_APPICON_NAME: Ledger\n", spec)
         self.assertNotIn("Resources/LegacyIcon.xcassets", spec)
 
-    def test_sdk_26_excludes_new_icon_and_uses_exported_appearances(self):
+    def test_sdk_26_uses_native_icon_without_siri_27_schema(self):
         spec = prepare_spec(self.source, 26)
-        self.assertIn("excludes: [Info.plist, Ledger.icon]", spec)
-        self.assertIn("Resources/LegacyIcon.xcassets", spec)
-        self.assertIn("ASSETCATALOG_COMPILER_APPICON_NAME: LedgerFallback", spec)
+        self.assertNotIn("Resources/LegacyIcon.xcassets", spec)
+        self.assertIn("ASSETCATALOG_COMPILER_APPICON_NAME: Ledger\n", spec)
         self.assertNotIn("LEDGER_SIRI_AI", spec)
+
+    def test_icon_does_not_double_apply_glass_or_shadows(self):
+        import json
+        icon = Path(__file__).resolve().parents[2] / "FinancialApp/Ledger.icon/icon.json"
+        data = json.loads(icon.read_text())
+        self.assertNotIn("refractivity", data.get("features", []))
+        for group in data["groups"]:
+            self.assertFalse(group["specular"])
+            self.assertEqual(group["shadow"]["opacity"], 0)
+            self.assertTrue(all(not layer["glass"] for layer in group["layers"]))
 
     def test_old_build_tools_are_rejected(self):
         with self.assertRaises(ValueError):

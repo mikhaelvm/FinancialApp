@@ -12,7 +12,7 @@ final class TransactionViewModel {
         }
         if let transaction {
             try ensureNotScheduledPayment(transaction, context: context)
-            guard transaction.card == nil, transaction.subscription == nil, transaction.recurrenceKey == nil else {
+            guard transaction.card == nil, transaction.subscription == nil, !transaction.isAutomaticRecurrence else {
                 throw FinanceError.invalid("Este lançamento é gerenciado pelo cartão ou pela assinatura.")
             }
             transaction.title = name
@@ -29,7 +29,7 @@ final class TransactionViewModel {
     func deleteCash(_ transaction: Transaction, context: ModelContext) throws {
         try ensureNotScheduledPayment(transaction, context: context)
         guard transaction.card == nil, transaction.subscription == nil,
-              transaction.recurrenceKey == nil else {
+              !transaction.isAutomaticRecurrence else {
             throw FinanceError.invalid("Lançamentos automáticos são mantidos no histórico. Gerencie a assinatura para cobranças futuras.")
         }
         context.delete(transaction)

@@ -30,6 +30,7 @@ struct AddTransactionView: View {
     @State private var cycle = BillingCycle.monthly
     @State private var error: String?
     @State private var loaded = false
+    @FocusState private var amountFocused: Bool
 
     private var isEditing: Bool { transaction != nil || subscription != nil }
     private var selectedCard: CreditCard? { cards.first { $0.id == cardID } }
@@ -38,7 +39,27 @@ struct AddTransactionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if !isEditing {
+                Section {
+                    if subscription == nil {
+                        Picker("Tipo de lançamento", selection: $kind) {
+                            Label("Despesa", systemImage: "minus.circle.fill").tag(TransactionKind.expense)
+                            Label("Receita", systemImage: "plus.circle.fill").tag(TransactionKind.income)
+                        }.pickerStyle(.segmented)
+                            .accessibilityHint("Escolha se o dinheiro sai ou entra na sua conta")
+                    } else {
+                        Label("Despesa recorrente", systemImage: "repeat")
+                    }
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("R$").font(.title2).foregroundStyle(.secondary)
+                        TextField("0,00", text: $amount)
+                            .font(.system(.largeTitle, design: .rounded).weight(.medium)).monospacedDigit()
+                            .keyboardType(.decimalPad).focused($amountFocused)
+                            .accessibilityLabel(mode == .installment ? "Valor total da compra" : "Valor em reais")
+                    }.padding(.vertical, 8)
+                    Text(kind == .income ? "Dinheiro que você recebeu." : (mode == .installment ? "Informe o valor total da compra, antes de parcelar." : "Dinheiro que você gastou ou vai pagar."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                if !isEditing && kind == .expense {
                     Section("Tipo de lançamento") {
                         Picker("Modalidade", selection: $mode) {
                             ForEach(EntryMode.allCases) { Text($0.rawValue).tag($0) }
@@ -46,18 +67,12 @@ struct AddTransactionView: View {
                     }
                 }
                 Section("Detalhes") {
-                    TextField("Título", text: $title).textInputAutocapitalization(.sentences)
-                    TextField(mode == .installment ? "Valor total (R$): 1.200,00" : "Valor (R$): 120,00", text: $amount)
-                        .keyboardType(.decimalPad)
+                    TextField(kind == .income ? "Ex.: Salário, reembolso" : "Ex.: Mercado, almoço", text: $title)
+                        .textInputAutocapitalization(.sentences)
                     Picker("Categoria", selection: $categoryID) {
                         Text("Sem categoria").tag(nil as UUID?)
                         ForEach(categories) { category in
                             Label(category.name, systemImage: category.symbol).tag(Optional(category.id))
-                        }
-                    }
-                    if mode == .single {
-                        Picker("Natureza", selection: $kind) {
-                            ForEach(TransactionKind.allCases) { Text($0.title).tag($0) }
                         }
                     }
                     if mode == .scheduled {
@@ -103,18 +118,31 @@ struct AddTransactionView: View {
                     }
                 }
             }
-            .navigationTitle(isEditing ? "Editar lançamento" : "Novo lançamento")
+            .navigationTitle(isEditing ? "Editar lançamento" : (kind == .income ? "Nova receita" : "Nova despesa"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Salvar", action: save).fontWeight(.semibold) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isEditing ? "Salvar" : "Adicionar", action: save).fontWeight(.semibold)
+                        .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || Money.parse(amount) == nil)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Concluir") { amountFocused = false }
+                }
             }
             .onAppear(perform: load)
             .onChange(of: mode) { _, newMode in
+                if newMode != .single { kind = .expense }
+                if newMode == .single && date > .now { date = .now }
                 if newMode == .installment { kind = .expense; cardID = cardID ?? cards.first?.id }
+            }
+            .onChange(of: kind) { _, newKind in
+                if newKind == .income { mode = .single; cardID = nil; if date > .now { date = .now } }
             }
             .financeError($error)
         }
+        .presentationDragIndicator(.visible)
     }
 
     private func load() {

@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct CreditCardsView: View {
+    @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     @Environment(\.modelContext) private var context
     @Query(sort: \CreditCard.name) private var cards: [CreditCard]
     @State private var showAdd = false
@@ -21,22 +22,23 @@ struct CreditCardsView: View {
                             Image(systemName: "wave.3.right").accessibilityHidden(true)
                         }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Limite disponível").font(.caption).foregroundStyle(.white.opacity(0.8))
-                            Text(Money.format(card.availableLimitCents)).font(.title2.bold()).monospacedDigit()
+                            Text("Limite disponível").font(.caption).foregroundStyle(.secondary)
+                            Text(hideAmounts ? "••••" : Money.format(card.availableLimitCents)).font(.title2.bold()).monospacedDigit()
                         }
                         ProgressView(value: min(Double(card.usedLimitCents), Double(card.limitCents)),
                                      total: Double(max(1, card.limitCents)))
-                            .tint(.mint)
+                            .tint(card.availableLimitCents == 0 ? .orange : LedgerTheme.accent)
+                            .opacity(hideAmounts ? 0 : 1)
                             .accessibilityLabel("Limite utilizado")
-                            .accessibilityValue(Money.format(card.usedLimitCents))
+                            .accessibilityValue(hideAmounts ? "Valor oculto" : Money.format(card.usedLimitCents))
                         HStack(alignment: .top) {
-                            Text("Limite total\n\(Money.format(card.limitCents))")
+                            Text("Limite total\n\(hideAmounts ? "••••" : Money.format(card.limitCents))")
                             Spacer()
                             Text("Fecha \(card.closingDay) • Vence \(card.dueDay)")
-                        }.font(.caption).foregroundStyle(.white.opacity(0.85))
+                        }.font(.caption).foregroundStyle(.secondary)
                     }
-                    .foregroundStyle(.white).padding(22)
-                    .background(LedgerTheme.hero, in: RoundedRectangle(cornerRadius: 24))
+                    .foregroundStyle(.primary).padding(20)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 4))

@@ -25,6 +25,7 @@ struct RootView: View {
         .environment(router)
         .onOpenURL { router.open($0) }
         .sheet(isPresented: $router.showNewExpense) { AddTransactionView() }
+        .sheet(isPresented: $router.showNewIncome) { AddTransactionView(initialKind: .income) }
         .onReceive(NotificationCenter.default.publisher(for: FinanceEvents.didChange)
             .debounce(for: .milliseconds(350), scheduler: RunLoop.main)) { _ in
                 NotificationService.shared.refresh(context: context)
@@ -42,6 +43,7 @@ struct RootView: View {
     }
 
     private func refresh() {
+        LedgerThemeState.shared.refresh()
         do {
             if !initialized { try Persistence.seed(context: context); initialized = true }
             try RecurrenceEngine().synchronize(context: context)

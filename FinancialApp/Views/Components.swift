@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct MoneyRow: View {
+    @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     let title: String
     let cents: Int64
     var symbol: String = "banknote"
     var tint: Color = .primary
     var body: some View {
         LabeledContent {
-            Text(Money.format(cents)).monospacedDigit().foregroundStyle(tint)
+            Text(hideAmounts ? "••••" : Money.format(cents)).monospacedDigit().foregroundStyle(tint)
         } label: {
             Label(title, systemImage: symbol)
         }

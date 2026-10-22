@@ -13,6 +13,7 @@ final class LedgerRouter {
     var searchTerm = ""
     var selectedTransactionID: UUID?
     var showNewExpense = false
+    var showNewIncome = false
 
     func search(_ term: String) {
         searchTerm = term
@@ -34,6 +35,7 @@ final class LedgerRouter {
         guard url.scheme == "ledger" else { return }
         switch url.host {
         case "expense": showNewExpense = true
+        case "income": showNewIncome = true
         case "agenda": selectedTab = .agenda
         case "subscriptions": selectedTab = .subscriptions
         case "cards": selectedTab = .cards
