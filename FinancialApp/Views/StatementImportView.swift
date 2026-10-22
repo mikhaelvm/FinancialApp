@@ -163,14 +163,30 @@ struct StatementFilePicker: ViewModifier {
     @Binding var isPresented: Bool
     @State private var selected: SelectedStatementFile?
     @State private var error: String?
-    static var contentTypes: [UTType] { [.pdf, .commaSeparatedText, .plainText, UTType(filenameExtension: "ofx") ?? .data] }
+    @State private var pending: SelectedStatementFile?
+    @State private var reviewURL: URL?
+    // Some banks/providers label OFX and CSV as generic data. Validate the extension after selection.
+    static var contentTypes: [UTType] { [.item] }
     func body(content: Content) -> some View {
         content
-            .fileImporter(isPresented: $isPresented, allowedContentTypes: Self.contentTypes) { result in
-                do { selected = SelectedStatementFile(url: try result.get()) }
-                catch { if (error as NSError).code != NSUserCancelledError { self.error = error.localizedDescription } }
+            .sheet(isPresented: $isPresented, onDismiss: {
+                // Wait for Files to finish dismissing before presenting the review.
+                selected = pending
+                reviewURL = pending?.url
+                pending = nil
+            }) {
+                NativeStatementPicker { result in
+                    switch result {
+                    case .success(let url): pending = SelectedStatementFile(url: url)
+                    case .failure(let issue): error = issue.localizedDescription
+                    }
+                    isPresented = false
+                } onCancel: { isPresented = false }
             }
-            .sheet(item: $selected) { file in
+            .sheet(item: $selected, onDismiss: {
+                if let reviewURL { try? FileManager.default.removeItem(at: reviewURL.deletingLastPathComponent()) }
+                reviewURL = nil
+            }) { file in
                 NavigationStack {
                     StatementImportView(fileURL: file.url)
                         .toolbar { ToolbarItem(placement: .confirmationAction) { LedgerToolbarButton("Concluir", systemImage: "checkmark") { selected = nil } } }
@@ -179,6 +195,7 @@ struct StatementFilePicker: ViewModifier {
             .financeError($error)
     }
 }
+
 extension View {
     func statementImporter(isPresented: Binding<Bool>) -> some View { modifier(StatementFilePicker(isPresented: isPresented)) }
 }
