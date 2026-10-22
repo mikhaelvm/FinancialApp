@@ -73,12 +73,23 @@ struct CardFormView: View {
     @State private var closingDay = 25
     @State private var dueDay = 5
     @State private var error: String?
+    private enum Field: Hashable { case name, limit }
+    @FocusState private var focusedField: Field?
     var body: some View {
         NavigationStack {
             Form {
                 Section("Cartão") {
-                    TextField("Nome", text: $name)
-                    TextField("Limite (R$): 5.000,00", text: $limit).keyboardType(.decimalPad)
+                    TextField("Nome", text: $name).focused($focusedField, equals: .name)
+                        .submitLabel(.done).onSubmit { focusedField = nil }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Limite total").font(.caption).foregroundStyle(.secondary)
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("R$").foregroundStyle(.secondary)
+                            TextField("0,00", text: $limit).keyboardType(.decimalPad)
+                                .focused($focusedField, equals: .limit).monospacedDigit()
+                                .accessibilityLabel("Limite total em reais")
+                        }.font(.title2)
+                    }.padding(.vertical, 6)
                     Picker("Dia de fechamento", selection: $closingDay) {
                         ForEach(1...31, id: \.self) { Text("\($0)").tag($0) }
                     }
@@ -95,6 +106,10 @@ struct CardFormView: View {
             }
             .ledgerFormScreen(card == nil ? "Novo cartão" : "Editar cartão")
             .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    LedgerToolbarButton("Fechar teclado", systemImage: "checkmark") { focusedField = nil }
+                }
                 ToolbarItem(placement: .cancellationAction) { LedgerToolbarButton("Cancelar", systemImage: "xmark") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     LedgerToolbarButton("Salvar", systemImage: "checkmark") {

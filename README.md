@@ -2,7 +2,13 @@
 
 Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, sem CloudKit, servidor ou assinatura de sincronização. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
-## Versão 1.4
+## Versão 1.4.1
+
+- Resumo com Ajustes à esquerda e ações de ocultar valores/novo lançamento à direita.
+- Check do teclado fecha tanto o título quanto o valor do lançamento. O formulário do cartão também oferece conclusão para nome e limite, com R$ sempre visível.
+- Faturas por mês em linhas de texto e valor, com inicial maiúscula e gráfico compartilhado. Sem gráfico vazio quando todos os valores são zero. O comprometimento de limite fica em uma seção recolhível, com uma única explicação.
+- Limite do cartão em uma superfície nativa, mostrando disponível, total e em uso uma vez cada. Categorias respondem ao toque em toda a linha.
+- A prévia do seletor de apps só é ocultada quando o bloqueio de acesso está ativado; desativar a proteção mantém o conteúdo visível.
 
 - Bloqueio opcional por Face ID/Touch ID com alternativa pelo código do aparelho, autenticação para ativar/desativar e nova exigência após ir para segundo plano.
 - Proteção opaca acima dos modais na prévia do seletor de apps. Widgets e notificações ficam discretos com o bloqueio ativo; consultas financeiras dos App Intents respeitam a sessão.
@@ -12,7 +18,7 @@ Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações l
 - Evolução de entradas/saídas em seis meses e comparação de saídas até o mesmo dia do mês anterior. Compras no cartão não duplicam seus pagamentos de faturas nos totais da conta.
 - Nome interno e tradução do bundle corrigidos para Ledger; o botão oficial do Atalhos continua sendo utilizado.
 
-- Resumo com somente o botão de Ajustes à esquerda na barra de navegação; título grande que se recolhe ao rolar. Lançamentos continuam acessíveis nos atalhos do saldo e ocultação de valores nos Ajustes.
+- Resumo com Ajustes à esquerda e atalhos de ocultação e novo lançamento à direita; título grande que se recolhe ao rolar.
 - Nomes das categorias em cor primária do sistema (branco no modo escuro e preto no claro), preservando símbolos coloridos.
 - Botões de navegação dos modais usam X para cancelar e check para salvar/concluir, com rótulos de acessibilidade para VoiceOver.
 
@@ -120,7 +126,7 @@ Referências: [WidgetKit](https://developer.apple.com/documentation/widgetkit), 
 
 Abra **Ajustes → Privacidade e segurança → Bloquear com Face ID/Touch ID**. A opção permanece desligada até uma autenticação bem-sucedida. Desativar também pede autenticação. É necessário configurar o código do aparelho; o iOS oferece esse código como alternativa quando a biometria não está disponível.
 
-O Ledger bloqueia no início de uma nova sessão e após ir para segundo plano. Abrir notificações, widgets, links e controles não evita a proteção. A prévia no seletor de apps é coberta por uma janela opaca da cena, acima inclusive de formulários e alertas; os campos em edição permanecem montados. Cancelar a autenticação mantém o bloqueio e permite tentar novamente pelo botão, sem repetir prompts em ciclo. Solicitações antigas não podem liberar a sessão após ela ter sido bloqueada novamente.
+O Ledger bloqueia no início de uma nova sessão e após ir para segundo plano. Abrir notificações, widgets, links e controles não evita a proteção. Com o bloqueio ativado, a prévia no seletor de apps é coberta por uma janela opaca da cena, acima inclusive de formulários e alertas; os campos em edição permanecem montados. Cancelar a autenticação mantém o bloqueio e permite tentar novamente pelo botão, sem repetir prompts em ciclo. Solicitações antigas não podem liberar a sessão após ela ter sido bloqueada novamente.
 
 Com a opção ativa, novos resumos compartilhados dos widgets não contêm valores nem descrições financeiras, e notificações usam título Ledger e texto genérico. A atualização de widgets segue os prazos do sistema. Atalhos que consultam ou alteram dados e consultas de entidades recusam acesso enquanto a sessão está bloqueada; abra/desbloqueie o Ledger antes de executá-los. As ações que apenas abrem telas continuam encaminhando à interface protegida.
 
@@ -199,12 +205,13 @@ FinancialApp/Services/AppLockService.swift
 FinancialApp/Services/FinancialReview.swift
 FinancialApp/Views/LedgerSecurityHost.swift
 FinancialApp/Views/CashFlowReviewView.swift
+FinancialApp/Views/InvoiceForecastChart.swift
 FinancialApp/pt-BR.lproj/InfoPlist.strings
 Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **60 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **61 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 

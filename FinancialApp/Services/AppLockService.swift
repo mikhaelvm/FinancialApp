@@ -98,6 +98,10 @@ final class AppLockService {
         if isEnabled && isLocked { throw FinanceError.invalid("Abra o Ledger e desbloqueie o acesso antes de usar esta ação ou consultar seus dados.") }
     }
 
+    func shouldConcealContent(isActive: Bool) -> Bool {
+        isEnabled && (isLocked || !isActive)
+    }
+
     func resetAfterDataErase() {
         revision += 1; authentication.cancel(); isAuthenticating = false
         defaults.removeObject(forKey: Self.enabledKey)

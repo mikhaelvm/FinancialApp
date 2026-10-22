@@ -10,12 +10,13 @@ import UIKit
     init(@ViewBuilder content: () -> Content) { self.content = content() }
 
     var body: some View {
+        let concealed = lock.shouldConcealContent(isActive: phase == .active)
         content
             .opacity(lock.isLocked ? 0 : 1)
             .disabled(lock.isLocked)
-            .accessibilityHidden(lock.isLocked || phase != .active)
+            .accessibilityHidden(concealed)
             .background {
-                LedgerPrivacyWindow(covered: lock.isLocked || phase != .active,
+                LedgerPrivacyWindow(covered: concealed,
                                     interactive: phase == .active && lock.isLocked,
                                     appearance: LedgerAppearance(rawValue: appearance) ?? .system,
                                     accent: LedgerAccent(rawValue: accent) ?? .teal)
@@ -57,7 +58,7 @@ import UIKit
         private var inactiveObserver: NSObjectProtocol?
         private var activeObserver: NSObjectProtocol?
         private var backgroundObserver: NSObjectProtocol?
-        private var covered = true
+        private var covered = false
         private var interactive = false
         private var appearance = LedgerAppearance.system
         private var accent = LedgerAccent.teal
@@ -96,9 +97,12 @@ import UIKit
             }
             render()
         }
-        private func coverForSnapshot() { covered = true; interactive = false; render() }
+        private func coverForSnapshot() {
+            covered = AppLockService.shared.shouldConcealContent(isActive: false)
+            interactive = false; render()
+        }
         private func showCurrentSession() {
-            covered = AppLockService.shared.isLocked; interactive = covered
+            covered = AppLockService.shared.shouldConcealContent(isActive: true); interactive = covered
             render()
         }
         private func render() {
@@ -107,7 +111,7 @@ import UIKit
             if let host = window.rootViewController as? UIHostingController<LedgerLockScreen> { host.rootView = cover }
             else { window.rootViewController = UIHostingController(rootView: cover) }
             window.isUserInteractionEnabled = interactive
-            window.isHidden = !covered
+            window.isHidden = !covered || !AppLockService.shared.isEnabled
         }
         func close() { window?.isHidden = true; window?.rootViewController = nil; window = nil }
         func invalidate() {

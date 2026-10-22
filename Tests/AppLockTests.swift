@@ -123,4 +123,22 @@ final class AppLockTests: XCTestCase {
         XCTAssertTrue(lock.isLocked); XCTAssertNil(lock.errorMessage)
         XCTAssertEqual(auth.requests, 1)
     }
+
+    func testPreviewIsVisibleWhenProtectionIsDisabledAndCoveredOnlyWhenEnabled() async throws {
+        let (lock, _, defaults, name) = try fixture()
+        defer { defaults.removePersistentDomain(forName: name) }
+        XCTAssertFalse(lock.shouldConcealContent(isActive: true))
+        XCTAssertFalse(lock.shouldConcealContent(isActive: false))
+        lock.lock()
+        XCTAssertFalse(lock.shouldConcealContent(isActive: false))
+        let enabled = await lock.setEnabled(true)
+        XCTAssertTrue(enabled)
+        XCTAssertFalse(lock.shouldConcealContent(isActive: true))
+        XCTAssertTrue(lock.shouldConcealContent(isActive: false))
+        lock.lock()
+        XCTAssertTrue(lock.shouldConcealContent(isActive: true))
+        let disabled = await lock.setEnabled(false)
+        XCTAssertTrue(disabled)
+        XCTAssertFalse(lock.shouldConcealContent(isActive: false))
+    }
 }

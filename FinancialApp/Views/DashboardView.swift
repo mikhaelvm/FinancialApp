@@ -97,13 +97,8 @@ struct DashboardView: View {
             }
             Section {
                 DisclosureGroup("Faturas dos próximos 12 meses", isExpanded: $showForecast) {
-                    if !hideAmounts {
-                        Chart(snapshot.forecasts) { item in
-                            BarMark(x: .value("Mês", item.month, unit: .month), y: .value("R$", Double(item.invoiceCents) / 100))
-                                .foregroundStyle(LedgerTheme.accent).cornerRadius(3)
-                        }.frame(height: 160).padding(.vertical, 8)
-                    }
-                    ForEach(snapshot.forecasts) { item in MoneyRow(title: FinanceDate.monthTitle(item.month), cents: item.invoiceCents) }
+                    InvoiceForecastChart(forecasts: snapshot.forecasts)
+                    ForEach(snapshot.forecasts) { item in MonthAmountRow(month: item.month, cents: item.invoiceCents) }
                 }
             } footer: {
                 Text("O saldo muda quando o dinheiro entra ou sai da conta. Compras no cartão entram nas faturas. Previsões incluem compromissos registrados, sem presumir receitas futuras.")
@@ -113,6 +108,15 @@ struct DashboardView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 LedgerToolbarButton("Ajustes", systemImage: "gearshape") { showSettings = true }
+            }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                LedgerToolbarButton(hideAmounts ? "Mostrar valores" : "Ocultar valores", systemImage: hideAmounts ? "eye.slash" : "eye") { hideAmounts.toggle() }
+                Menu {
+                    Button("Despesa", systemImage: "minus.circle") { entry = .expense }
+                    Button("Receita", systemImage: "plus.circle") { entry = .income }
+                    Button("Conta agendada", systemImage: "calendar.badge.plus") { entry = .scheduled }
+                    Button("Recorrência", systemImage: "repeat") { entry = .recurring }
+                } label: { Label("Novo lançamento", systemImage: "plus").labelStyle(.iconOnly) }
             }
         }
         .sheet(item: $entry) { action in AddTransactionView(initialMode: action.mode, initialKind: action.kind) }

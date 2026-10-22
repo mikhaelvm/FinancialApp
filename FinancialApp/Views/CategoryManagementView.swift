@@ -15,8 +15,13 @@ struct CategoryManagementView: View {
                             Text(category.name).foregroundStyle(Color.primary)
                             Spacer()
                             Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-                        }.padding(.vertical, 3)
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }.buttonStyle(.plain)
+                        .listRowInsets(EdgeInsets())
+                        .accessibilityHint("Editar categoria")
                 }
             } footer: { Text("Personalize símbolos e cores ou crie categorias para organizar seus lançamentos.") }
         }

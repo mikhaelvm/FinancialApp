@@ -31,7 +31,8 @@ struct AddTransactionView: View {
     @State private var cycle = BillingCycle.monthly
     @State private var error: String?
     @State private var loaded = false
-    @FocusState private var amountFocused: Bool
+    private enum Field: Hashable { case amount, title }
+    @FocusState private var focusedField: Field?
 
     private var isEditing: Bool { transaction != nil || subscription != nil }
     private var selectedCard: CreditCard? { cards.first { $0.id == cardID } }
@@ -55,7 +56,7 @@ struct AddTransactionView: View {
                         Text("R$").font(.title2).foregroundStyle(.secondary)
                         TextField("0,00", text: $amount)
                             .font(.system(.largeTitle, design: .rounded).weight(.medium)).monospacedDigit()
-                            .keyboardType(.decimalPad).focused($amountFocused)
+                            .keyboardType(.decimalPad).focused($focusedField, equals: .amount)
                             .accessibilityLabel(mode == .installment ? "Valor total da compra" : "Valor em reais")
                     }.padding(.vertical, 8)
                     Text(kind == .income ? "Dinheiro que você recebeu." : (mode == .installment ? "Informe o valor total da compra, antes de parcelar." : "Dinheiro que você gastou ou vai pagar."))
@@ -71,6 +72,9 @@ struct AddTransactionView: View {
                 Section("Detalhes") {
                     TextField(kind == .income ? "Ex.: Salário, reembolso" : "Ex.: Mercado, almoço", text: $title)
                         .textInputAutocapitalization(.sentences)
+                        .focused($focusedField, equals: .title)
+                        .submitLabel(.done)
+                        .onSubmit { focusedField = nil }
                     Picker("Categoria", selection: $categoryID) {
                         Text("Sem categoria").tag(nil as UUID?)
                         ForEach(categories) { category in
@@ -129,7 +133,7 @@ struct AddTransactionView: View {
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    LedgerToolbarButton("Concluir", systemImage: "checkmark") { amountFocused = false }
+                    LedgerToolbarButton("Fechar teclado", systemImage: "checkmark") { focusedField = nil }
                 }
             }
             .onAppear(perform: load)

@@ -59,6 +59,12 @@ enum FinanceDate {
     }
     static func sameMonth(_ a: Date, _ b: Date) -> Bool { month(a) == month(b) }
     static func monthTitle(_ date: Date) -> String {
-        date.formatted(.dateTime.month(.wide).year().locale(Locale(identifier: "pt_BR")))
+        capitalizedMonth(date.formatted(.dateTime.month(.wide).year().locale(Locale(identifier: "pt_BR"))))
+    }
+    static func shortMonthTitle(_ date: Date) -> String {
+        capitalizedMonth(date.formatted(.dateTime.month(.abbreviated).locale(Locale(identifier: "pt_BR"))))
+    }
+    private static func capitalizedMonth(_ text: String) -> String {
+        String(text.prefix(1)).uppercased(with: Locale(identifier: "pt_BR")) + String(text.dropFirst())
     }
 }

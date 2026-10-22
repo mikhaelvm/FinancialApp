@@ -26,24 +26,17 @@ struct CreditCardDetailView: View {
     var body: some View {
         let invoices = self.invoices
         let selected = selectedInvoice(in: invoices)
+        let forecasts = (0..<12).map { offset in
+            let month = FinanceDate.monthOffset(offset, from: .now)
+            return MonthForecast(month: month, invoiceCents: invoices.filter { FinanceDate.sameMonth($0.dueDate, month) }.reduce(0) { $0 + $1.remainingCents })
+        }
         List {
             Section("Limite") {
-                LedgerSummaryHeader(eyebrow: card.name, title: Money.format(card.availableLimitCents),
-                                    subtitle: "disponíveis de \(Money.format(card.limitCents))", symbol: "creditcard.fill")
-                    .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
-                MoneyRow(title: "Total", cents: card.limitCents, symbol: "creditcard")
-                MoneyRow(title: "Comprometido", cents: card.usedLimitCents, symbol: "lock", tint: .orange)
-                MoneyRow(title: "Disponível", cents: card.availableLimitCents, symbol: "checkmark.circle", tint: .green)
-                ProgressView(value: min(Double(card.usedLimitCents), Double(card.limitCents)),
-                             total: Double(max(1, card.limitCents)))
-                    .accessibilityLabel("Limite comprometido")
-                    .accessibilityValue(Money.format(card.usedLimitCents))
+                CreditLimitSummary(card: card)
                 if card.usedLimitCents > card.limitCents {
                     Label("Limite excedido por cobranças recorrentes", systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                 }
-                Text("Fecha dia \(card.closingDay) • Vence dia \(card.dueDay)")
-                    .font(.caption).foregroundStyle(.secondary)
             }
             Section {
                 if invoices.isEmpty {
@@ -92,31 +85,23 @@ struct CreditCardDetailView: View {
                 Text("Registrar pagamento representa uma saída da conta e libera o limite. O app não movimenta dinheiro no banco.")
             }
             Section {
-                Chart(0..<12, id: \.self) { offset in
-                    let month = FinanceDate.monthOffset(offset, from: .now)
-                    let cents = invoices.filter { FinanceDate.sameMonth($0.dueDate, month) }
-                        .reduce(Int64(0)) { $0 + $1.remainingCents }
-                    BarMark(x: .value("Mês", month, unit: .month), y: .value("R$", Double(cents) / 100))
-                        .foregroundStyle(.blue.gradient)
-                        .accessibilityLabel(FinanceDate.monthTitle(month))
-                        .accessibilityValue(Money.format(cents))
-                }
-                .chartXAxis { AxisMarks(values: .stride(by: .month, count: 3)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
-                .frame(height: 200)
-                ForEach(0..<12, id: \.self) { offset in
-                    let month = FinanceDate.monthOffset(offset, from: .now)
-                    let due = invoices.filter { FinanceDate.sameMonth($0.dueDate, month) }.reduce(Int64(0)) { $0 + $1.remainingCents }
-                    let committed = card.transactions.filter { ($0.invoiceDueDate ?? .distantPast) >= month }
-                        .reduce(Int64(0)) { $0 + $1.amountCents }
-                    let paid = card.payments.filter { $0.invoiceDueDate >= month }.reduce(Int64(0)) { $0 + $1.amountCents }
-                    VStack(alignment: .leading, spacing: 4) {
-                        MoneyRow(title: FinanceDate.monthTitle(month), cents: due, symbol: "calendar")
-                        Text("Parcelas e compras já lançadas a quitar a partir deste mês: \(Money.format(max(0, committed - paid)))")
-                            .font(.caption).foregroundStyle(.secondary)
+                InvoiceForecastChart(forecasts: forecasts)
+                ForEach(forecasts) { item in MonthAmountRow(month: item.month, cents: item.invoiceCents) }
+            } header: { Text("Próximas faturas") } footer: {
+                Text("Valores pendentes por mês de vencimento, incluindo assinaturas previstas.")
+            }
+            if !card.transactions.isEmpty {
+                Section {
+                    DisclosureGroup("Limite comprometido por mês") {
+                        ForEach(forecasts) { item in
+                            let committed = card.transactions.filter { ($0.invoiceDueDate ?? .distantPast) >= item.month }.reduce(Int64(0)) { $0 + $1.amountCents }
+                            let paid = card.payments.filter { $0.invoiceDueDate >= item.month }.reduce(Int64(0)) { $0 + $1.amountCents }
+                            MonthAmountRow(month: item.month, cents: max(0, committed - paid))
+                        }
                     }
+                } footer: {
+                    Text("Compras já lançadas a quitar a partir de cada mês, supondo a quitação das faturas anteriores.")
                 }
-            } header: { Text("Compromissos mês a mês") } footer: {
-                Text("Barras incluem assinaturas previstas. O comprometimento acumulado considera somente compras já lançadas e supõe quitação das faturas anteriores.")
             }
         }
         .ledgerListScreen(card.name, largeTitle: false)
@@ -138,5 +123,41 @@ struct CreditCardDetailView: View {
             Text("O valor será descontado do saldo consolidado. Confirme somente se o pagamento já foi feito.")
         }
         .financeError($error)
+    }
+}
+
+private struct CreditLimitSummary: View {
+    let card: CreditCard
+    @AppStorage("ledger.hideAmounts") private var hideAmounts = false
+    @Environment(\.dynamicTypeSize) private var typeSize
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Disponível para compras").font(.subheadline).foregroundStyle(.secondary)
+                Text(display(card.availableLimitCents))
+                    .font(.system(.largeTitle, design: .rounded).weight(.semibold)).monospacedDigit()
+                    .minimumScaleFactor(0.65).lineLimit(1)
+            }
+            if !hideAmounts {
+                ProgressView(value: min(Double(card.usedLimitCents), Double(card.limitCents)), total: Double(max(1, card.limitCents)))
+                    .tint(card.usedLimitCents >= card.limitCents ? .orange : LedgerTheme.accent)
+                    .accessibilityLabel("Limite utilizado").accessibilityValue(Money.format(card.usedLimitCents))
+            }
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12)) : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+            layout {
+                metric("Limite total", cents: card.limitCents)
+                metric("Em uso", cents: card.usedLimitCents)
+            }
+            Divider()
+            Text("Fecha dia \(card.closingDay) • Vence dia \(card.dueDay)")
+                .font(.caption).foregroundStyle(.secondary)
+        }.padding(.vertical, 12)
+    }
+    private func display(_ cents: Int64) -> String { hideAmounts ? "••••" : Money.format(cents) }
+    private func metric(_ title: String, cents: Int64) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(display(cents)).font(.subheadline.weight(.medium)).monospacedDigit()
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
