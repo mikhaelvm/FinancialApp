@@ -26,7 +26,7 @@ struct PaymentAgendaView: View {
                                             scheduled: scheduled, through: horizon)
     }
     private var filtered: [PaymentCommitment] {
-        commitments.filter { filter == .overdue ? $0.isOverdue() : !$0.isOverdue() }
+        PaymentPlanner.agendaItems(commitments).filter { filter == .overdue ? $0.isOverdue() : !$0.isOverdue() }
     }
     private var dates: [Date] { Array(Set(filtered.map(\.dueDate))).sorted() }
     private var nextWeekCents: Int64 {
@@ -37,6 +37,7 @@ struct PaymentAgendaView: View {
 
     var body: some View {
         List {
+            PaymentsSectionPicker()
             Section {
                 LedgerSummaryHeader(eyebrow: "Saídas previstas • próximos 7 dias", title: Money.format(nextWeekCents),
                                     subtitle: "Faturas, contas e recorrências na conta, sem somar cobranças no cartão duas vezes.",
@@ -98,7 +99,7 @@ struct PaymentAgendaView: View {
                 Label("Lembretes de vencimento", systemImage: "bell.badge")
                 Button("Configurar notificações e Siri") { showSettings = true }
             } footer: {
-                Text("Previsão dos próximos 60 dias. Cobranças no cartão aparecem junto à fatura, mas não aumentam o total de saídas da conta novamente. Assinaturas na conta são lançadas automaticamente na data de renovação.")
+                Text("Contas e recorrências dos próximos 60 dias, com apenas a próxima fatura pendente de cada cartão. Todas as faturas atrasadas continuam visíveis. Cobranças no cartão aparecem junto à fatura, mas não aumentam o total de saídas da conta novamente. Assinaturas na conta são lançadas automaticamente na data de renovação.")
             }
         }
         .ledgerListScreen("Pagamentos")

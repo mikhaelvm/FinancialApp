@@ -51,10 +51,10 @@ struct DashboardView: View {
             }
             Section("Planejamento") {
                 NavigationLink { CashFlowReviewView() } label: {
-                    SpendingComparisonRow(comparison: FinancialReview.comparison(transactions: transactions, payments: payments))
+                    Label("Evolução da conta", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 NavigationLink { BudgetSettingsView() } label: {
-                    BudgetProgressView(spentCents: snapshot.categories.reduce(0) { $0 + $1.cents }, budgetCents: Int64(budget))
+                    Label("Orçamento mensal", systemImage: "chart.pie")
                 }
                 if reserveGoal > 0 {
                     VStack(alignment: .leading, spacing: 8) {

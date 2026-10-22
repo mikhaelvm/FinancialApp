@@ -13,6 +13,21 @@ final class LedgerPlanningTests: XCTestCase {
                           kind: .scheduled, sourceID: UUID(), detail: "")
     }
 
+    func testAgendaKeepsOnlyNextInvoicePerCardAndAllOverdueInvoices() {
+        let first = UUID(), second = UUID()
+        func invoice(_ id: String, _ card: UUID, _ day: Int) -> PaymentCommitment {
+            PaymentCommitment(id: id, title: "Fatura", amountCents: 1000, dueDate: date(day),
+                              kind: .invoice, sourceID: card, detail: "")
+        }
+        let rows = [invoice("later", first, 30), invoice("next", first, 25),
+                    invoice("late1", first, 10), invoice("late2", first, 15),
+                    invoice("other", second, 26), item(id: "scheduled", due: date(30))]
+        let result = PaymentPlanner.agendaItems(rows, today: date(22))
+        XCTAssertEqual(result.map(\.id), ["late1", "late2", "next", "other", "scheduled"])
+        let paidNext = rows.filter { $0.id != "next" }
+        XCTAssertTrue(PaymentPlanner.agendaItems(paidNext, today: date(22)).contains { $0.id == "later" })
+    }
+
     func testReminderIncludesAdvanceAndDueDayAtChosenHour() {
         let preferences = ReminderPreferences(enabled: true, daysBefore: 3, hour: 10, minute: 30)
         let reminders = ReminderPlanner().reminders(for: [item(due: date(25))], preferences: preferences, now: date(21))

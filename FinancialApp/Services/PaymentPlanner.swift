@@ -32,6 +32,18 @@ struct PaymentCommitment: Identifiable {
 }
 
 struct PaymentPlanner {
+    /// Agenda hides later invoices while retaining every overdue bill.
+    /// Full projections remain available to notifications, widgets and cash-flow calculations.
+    static func agendaItems(_ commitments: [PaymentCommitment], today: Date = .now) -> [PaymentCommitment] {
+        var nextCards = Set<UUID>()
+        return commitments.sorted {
+            $0.dueDate == $1.dueDate ? $0.id < $1.id : $0.dueDate < $1.dueDate
+        }.filter { item in
+            guard item.kind == .invoice, !item.isOverdue(on: today) else { return true }
+            return nextCards.insert(item.sourceID).inserted
+        }
+    }
+
     func commitments(cards: [CreditCard], subscriptions: [Subscription],
                      scheduled: [ScheduledPayment], through horizon: Date,
                      today: Date = .now) -> [PaymentCommitment] {

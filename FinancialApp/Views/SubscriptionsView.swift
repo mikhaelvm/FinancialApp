@@ -24,6 +24,7 @@ struct SubscriptionsView: View {
 
     var body: some View {
         List {
+            PaymentsSectionPicker()
             Section {
                 LedgerSummaryHeader(eyebrow: "Seu compromisso mensal fixo", title: Money.format(monthlyCents),
                                     subtitle: "\(subscriptions.filter(\.isActive).count) recorrências ativas • média mensal", symbol: "repeat")
