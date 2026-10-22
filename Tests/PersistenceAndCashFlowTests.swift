@@ -1,6 +1,8 @@
 import XCTest
 import SwiftData
 @testable import FinancialApp
+// A scoped import selects our model over ObjectiveC.Category exposed by XCTest.
+@testable import class FinancialApp.Category
 
 @MainActor
 final class PersistenceAndCashFlowTests: XCTestCase {
