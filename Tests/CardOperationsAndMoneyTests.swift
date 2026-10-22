@@ -1,9 +1,10 @@
 import XCTest
-import SwiftUI
+import struct SwiftUI.Binding
 import UIKit
 import SwiftData
 @testable import FinancialApp
 @testable import class FinancialApp.Category
+@testable import class FinancialApp.Transaction
 
 @MainActor
 final class CardOperationsAndMoneyTests: XCTestCase {
@@ -16,7 +17,7 @@ final class CardOperationsAndMoneyTests: XCTestCase {
         return card
     }
     private func balance(context: ModelContext) throws -> Int64 {
-        DashboardViewModel().snapshot(transactions: try context.fetch(FetchDescriptor<FinancialApp.Transaction>()),
+        DashboardViewModel().snapshot(transactions: try context.fetch(FetchDescriptor<Transaction>()),
             cards: try context.fetch(FetchDescriptor<CreditCard>()), subscriptions: [],
             payments: try context.fetch(FetchDescriptor<InvoicePayment>()), month: .now).balance
     }
@@ -85,7 +86,7 @@ final class CardOperationsAndMoneyTests: XCTestCase {
         XCTAssertEqual(before, -10000)
         XCTAssertEqual(card.usedLimitCents, 5000)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<InvoicePayment>()), 0)
-        XCTAssertTrue(try context.fetch(FetchDescriptor<FinancialApp.Transaction>()).contains { $0.card == nil && $0.amountCents == 10000 })
+        XCTAssertTrue(try context.fetch(FetchDescriptor<Transaction>()).contains { $0.card == nil && $0.amountCents == 10000 })
     }
 
     func testPartialPaymentKeepsItsAllocationAndOnlyMovesExcessToCash() throws {
@@ -101,7 +102,7 @@ final class CardOperationsAndMoneyTests: XCTestCase {
         try model.deletePurchase(context: context, card: card, purchaseID: group.purchaseID)
         XCTAssertEqual(try balance(context: context), -15000)
         XCTAssertEqual(card.payments.reduce(0) { $0 + $1.amountCents }, 10000)
-        let cash = try context.fetch(FetchDescriptor<FinancialApp.Transaction>()).filter { $0.card == nil }
+        let cash = try context.fetch(FetchDescriptor<Transaction>()).filter { $0.card == nil }
         XCTAssertEqual(cash.reduce(0) { $0 + $1.amountCents }, 5000)
         let imported = StatementRow(id: "statement:bank-payment", date: date(1, 25), title: "PAGAMENTO CARTAO", signedCents: -15000)
         XCTAssertTrue(try StatementImportService.prepare([imported], context: context)[0].isDuplicate)
@@ -122,7 +123,7 @@ final class CardOperationsAndMoneyTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<CreditCard>()), 0)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<InvoicePayment>()), 0)
         XCTAssertFalse(subscription.isActive); XCTAssertNil(subscription.card)
-        XCTAssertEqual(try context.fetch(FetchDescriptor<FinancialApp.Transaction>()).filter { $0.card == nil }.count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Transaction>()).filter { $0.card == nil }.count, 1)
         XCTAssertThrowsError(try model.delete(context: context, card: card))
     }
 
