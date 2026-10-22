@@ -201,7 +201,7 @@ struct ScheduledPaymentForm: View {
                         .submitLabel(.done).onSubmit { focusedField = nil }
                     HStack {
                         Text("R$").foregroundStyle(.secondary)
-                        CurrencyTextField(text: $amount, focus: Binding(get: { focusedField == .amount }, set: { focusedField = $0 ? .amount : nil })).accessibilityLabel("Valor em reais")
+                        CurrencyTextField(text: $amount).accessibilityLabel("Valor em reais")
                     }
                     DatePicker("Vencimento", selection: $dueDate, displayedComponents: .date)
                     Picker("Categoria", selection: $categoryID) {

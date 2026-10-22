@@ -6,7 +6,6 @@ struct CurrencyTextField: UIViewRepresentable {
     var placeholder = "0,00"
     @Binding var text: String
     var textStyle: UIFont.TextStyle = .body
-    var focus: Binding<Bool>? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIView(context: Context) -> UITextField {
@@ -14,6 +13,14 @@ struct CurrencyTextField: UIViewRepresentable {
         field.delegate = context.coordinator
         field.keyboardType = .numberPad
         field.placeholder = placeholder
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        let done = UIBarButtonItem(image: UIImage(systemName: "checkmark"), primaryAction: UIAction { [weak field] _ in
+            field?.resignFirstResponder()
+        })
+        done.accessibilityLabel = "Fechar teclado"
+        toolbar.items = [UIBarButtonItem(systemItem: .flexibleSpace), done]
+        field.inputAccessoryView = toolbar
         field.adjustsFontForContentSizeCategory = true
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return field
@@ -25,7 +32,6 @@ struct CurrencyTextField: UIViewRepresentable {
         field.placeholder = placeholder
         field.font = UIFont.preferredFont(forTextStyle: textStyle)
         field.textColor = .label
-        if let focus, !focus.wrappedValue, field.isFirstResponder { field.resignFirstResponder() }
     }
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextField, context: Context) -> CGSize? {
         CGSize(width: proposal.width ?? 120, height: uiView.intrinsicContentSize.height)
@@ -44,10 +50,6 @@ struct CurrencyTextField: UIViewRepresentable {
             field.selectedTextRange = field.textRange(from: end, to: end)
             parent.text = formatted
             return false
-        }
-        func textFieldDidBeginEditing(_ field: UITextField) { parent.focus?.wrappedValue = true }
-        func textFieldDidEndEditing(_ field: UITextField) {
-            if parent.focus?.wrappedValue == true { parent.focus?.wrappedValue = false }
         }
     }
 }
