@@ -143,7 +143,7 @@ import UIKit
                     Label(lock.isAuthenticating ? "Autenticando…" : "Desbloquear com \(lock.methodName)", systemImage: lock.symbol)
                         .font(.headline).padding(.vertical, 8).frame(maxWidth: .infinity)
                 }.buttonStyle(.borderedProminent).disabled(lock.isAuthenticating)
-                Text("Você também pode usar o código do aparelho na autenticação do iOS.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                Text("Use também o código do aparelho.").font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 if let message = lock.errorMessage { Text(message).font(.footnote).foregroundStyle(.orange).multilineTextAlignment(.center) }
             }
             Spacer()

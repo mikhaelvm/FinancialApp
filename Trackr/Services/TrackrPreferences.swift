@@ -9,26 +9,26 @@ enum TrackrAppearance: String, CaseIterable, Identifiable {
 }
 
 enum TrackrAccent: String, CaseIterable, Identifiable {
-    case teal, blue, indigo, green, orange, pink
+    case blue, indigo, orange, pink, green, teal
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .teal: return "Verde-petróleo"
         case .blue: return "Azul"
         case .indigo: return "Índigo"
-        case .green: return "Verde"
         case .orange: return "Laranja"
         case .pink: return "Rosa"
+        case .green: return "Verde"
+        case .teal: return "Verde-petróleo"
         }
     }
     var color: Color {
         switch self {
-        case .teal: return .teal
         case .blue: return .blue
         case .indigo: return .indigo
-        case .green: return .green
         case .orange: return .orange
         case .pink: return .pink
+        case .green: return .green
+        case .teal: return .teal
         }
     }
 }

@@ -76,6 +76,18 @@ class BuildSpecTests(unittest.TestCase):
         with open(root / 'Shared/Trackr.entitlements', 'rb') as stream:
             self.assertEqual(plistlib.load(stream)['com.apple.security.application-groups'], ['$(TRACKR_APP_GROUP)'])
 
+    def test_ipa_upload_is_a_single_direct_file_without_zip_wrapper(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/build-ipa.yml').read_text()
+        upload = workflow.split('- name: Upload Trackr.ipa', 1)[1].split('- name: Upload test results', 1)[0]
+        self.assertIn('uses: actions/upload-artifact@v7', upload)
+        self.assertIn('path: build/Trackr.ipa', upload)
+        self.assertIn('archive: false', upload)
+        self.assertNotIn('Trackr-unsigned', workflow)
+        self.assertNotIn('.zip', upload)
+        # Packaging Payload into the IPA is still required by the iOS format.
+        self.assertIn('zip -qry ../Trackr.ipa Payload', workflow)
+
     def test_app_identity_and_face_id_permission_are_present(self):
         import plistlib
         root = Path(__file__).resolve().parents[2]

@@ -4,7 +4,7 @@ import SwiftData
 
 @MainActor @Observable
 final class CreditCardViewModel {
-    static let deletionExplanation = "O cartão, suas compras, parcelas e faturas serão removidos. Pagamentos já realizados serão preservados como despesas no Extrato, mantendo o saldo da conta. Recorrências vinculadas serão pausadas."
+    static let deletionExplanation = "Exclui cartão, compras e faturas. Mantém pagamentos no Extrato e pausa recorrências vinculadas."
     func save(context: ModelContext, card: CreditCard? = nil, name: String,
               limitText: String, closingDay: Int, dueDay: Int) throws {
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)

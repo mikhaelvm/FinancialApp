@@ -26,7 +26,7 @@ struct CashFlowReviewView: View {
                     .frame(height: 220).padding(.vertical, 8)
                 }
             } header: { Text("Últimos seis meses") } footer: {
-                Text("Valores registrados na conta. Saídas incluem despesas à vista e pagamentos de faturas, sem somar novamente as compras no cartão. O mês atual está em andamento; o gráfico não presume saldo ou histórico anteriores ao Trackr.")
+                Text("Entradas e saídas registradas, incluindo faturas pagas. O mês atual está em andamento.")
             }
             ForEach(months.reversed()) { month in
                 Section(FinanceDate.monthTitle(month.month).capitalized) {

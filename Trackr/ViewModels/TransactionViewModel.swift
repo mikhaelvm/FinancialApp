@@ -4,7 +4,7 @@ import SwiftData
 
 @MainActor @Observable
 final class TransactionViewModel {
-    static let deletionExplanation = "Remove apenas este lançamento e recalcula o saldo. As próximas cobranças recorrentes permanecem ativas. Se for o registro de uma conta agendada paga, ela voltará a ficar pendente na Agenda."
+    static let deletionExplanation = "Exclui este lançamento e recalcula o saldo. Recorrências continuam; contas vinculadas voltam a ficar pendentes."
 
     func saveCash(context: ModelContext, transaction: Transaction? = nil, title: String,
                   amountText: String, kind: TransactionKind, date: Date, category: Category?) throws {

@@ -29,7 +29,7 @@ struct TrackrSettingsView: View {
                 if appLock.isAuthenticating { ProgressView("Confirmando identidade…") }
                 if let message = appLock.errorMessage { Text(message).font(.footnote).foregroundStyle(.orange) }
             } header: { Text("Privacidade e segurança") } footer: {
-                Text("Exige autenticação ao abrir o Trackr e ao retornar do segundo plano. O código do aparelho é uma alternativa do iOS. Com a proteção ativa, widgets e notificações usam informações discretas. A prévia no seletor de apps é ocultada.")
+                Text("Face ID, Touch ID ou código ao abrir e retornar ao app. Oculta a prévia, os valores dos widgets e os detalhes dos alertas.")
             }
             Section("Personalização") {
                 Picker("Aparência", selection: $appearance) {
@@ -87,13 +87,13 @@ struct TrackrSettingsView: View {
                 }
                 if let error = notifications.lastError { Text(error).foregroundStyle(.orange).font(.footnote) }
             } header: { Text("Faturas, contas e recorrências") } footer: {
-                Text("Os alertas são locais e funcionam com o app fechado depois de agendados. Mantemos os 60 lembretes mais próximos, dentro de 60 dias. Abra o Trackr periodicamente para renovar a fila. Foco e permissões do iOS podem silenciar alertas.")
+                Text("Até 60 alertas locais nos próximos 60 dias. Abra o app para renová-los. Foco e permissões do iOS podem silenciá-los.")
             }
             Section {
                 ShortcutsLink()
                 SiriTipView(intent: TrackrSummaryIntent())
             } header: { Text("Atalhos e Siri") } footer: {
-                Text("No app Atalhos, procure Trackr para combinar ações e criar automações. Valores são em reais. Registros por voz exigem o aparelho desbloqueado. No iOS 27, também é possível utilizar a busca integrada à Siri AI.")
+                Text("Procure Trackr no Atalhos. Valores em reais; registros por voz exigem desbloqueio.")
             }
             Section("Sobre") {
                 LabeledContent("Versão", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4")

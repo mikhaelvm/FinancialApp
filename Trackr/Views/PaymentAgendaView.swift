@@ -70,7 +70,7 @@ struct PaymentAgendaView: View {
                 Section {
                     if !scheduled.contains(where: \.isPaid) {
                         ContentUnavailableView("Tudo em seu tempo", systemImage: "checkmark.circle",
-                                               description: Text("As contas agendadas que você marcar como pagas aparecerão aqui."))
+                                               description: Text("Contas agendadas já pagas."))
                     }
                     ForEach(scheduled.filter(\.isPaid)) { payment in
                         HStack {
@@ -96,7 +96,7 @@ struct PaymentAgendaView: View {
                 }
             } else if filtered.isEmpty {
                 ContentUnavailableView(filter == .overdue ? "Nenhum atraso" : "Agenda tranquila", systemImage: "calendar.badge.checkmark",
-                                       description: Text(filter == .overdue ? "Seus compromissos estão em dia." : "Adicione uma conta, compra no cartão ou recorrência para planejar seus pagamentos."))
+                                       description: Text(filter == .overdue ? "Seus compromissos estão em dia." : "Adicione contas ou recorrências para começar."))
             } else {
                 ForEach(dates, id: \.self) { date in
                     Section(dateTitle(date)) {
@@ -135,14 +135,14 @@ struct PaymentAgendaView: View {
                 dismissing = nil
             }
         } message: {
-            Text("Sai da Agenda e dos lembretes, sem descontar do saldo ou registrar pagamento. Compras, limite do cartão e histórico da fatura permanecem. Você pode reativá-lo em Dispensados.")
+            Text("Retira da Agenda e dos alertas, sem débito. Compras e limite são mantidos. Reative em Dispensados.")
         }
         .confirmationDialog("Confirmar pagamento?", isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }), titleVisibility: .visible) {
             Button("Registrar pagamento") {
                 if let confirming { perform { try ScheduledPaymentViewModel().pay(confirming, context: context) } }
                 confirming = nil
             }
-        } message: { Text("Confirme somente se você já pagou. O valor será registrado como despesa no extrato de hoje.") }
+        } message: { Text("Registra uma despesa hoje. Confirme se já pagou.") }
         .confirmationDialog("Excluir conta agendada?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             Button(deleting?.isPaid == true ? "Excluir somente o agendamento" : "Excluir", role: .destructive) {
                 if let deleting { perform { try ScheduledPaymentViewModel().delete(deleting, context: context) } }
@@ -155,7 +155,7 @@ struct PaymentAgendaView: View {
                 }
             }
         } message: {
-            Text(deleting?.isPaid == true ? "Excluir somente o agendamento mantém a despesa já realizada no extrato. Você também pode excluir os dois registros." : "Esta conta e seus lembretes serão removidos. Faturas e assinaturas são gerenciadas nas respectivas telas.")
+            Text(deleting?.isPaid == true ? "Mantenha a despesa no Extrato ou exclua os dois registros." : "Remove esta conta e seus alertas.")
         }
         .financeError($error)
     }
@@ -209,7 +209,7 @@ struct ScheduledPaymentForm: View {
                 }
                 Section {
                     Label("Seu saldo só muda ao registrar o pagamento.", systemImage: "info.circle")
-                    Text("Para uma conta que se repete, use Nova recorrência na tela inicial. Os lembretes desta conta seguem suas preferências de notificações.")
+                    Text("Para contas que se repetem, crie uma recorrência.")
                 }.font(.footnote).foregroundStyle(.secondary)
                 if payment != nil {
                     Section { Button("Já paguei esta conta", systemImage: "checkmark.circle.fill") { confirmPayment = true } }
@@ -245,7 +245,7 @@ struct ScheduledPaymentForm: View {
                     do { try ScheduledPaymentViewModel().pay(payment, context: context); dismiss() }
                     catch { self.error = error.localizedDescription }
                 }
-            } message: { Text("O valor salvo da conta será descontado do saldo. Para alterar o valor, salve a edição antes de pagar.") }
+            } message: { Text("Desconta o valor salvo. Salve alterações antes de pagar.") }
             .financeError($error)
             .confirmationDialog("Excluir agendamento?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Excluir", role: .destructive) {

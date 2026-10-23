@@ -29,7 +29,7 @@ struct StatementImportView: View {
                 Button(filename.isEmpty ? "Selecionar extrato OFX, CSV ou PDF" : "Escolher outro arquivo", systemImage: "doc.badge.plus") { choosingFile = true }.disabled(isLoading)
                 if !filename.isEmpty { LabeledContent("Arquivo", value: filename).font(.caption) }
             } footer: {
-                Text("Use o extrato da conta, não a fatura do cartão. A análise ocorre neste aparelho. PDF exige revisão individual; saldo inicial e saldo final não são importados como movimentos.")
+                Text("Importe o extrato da conta. Análise local; revise PDFs. Saldos não viram lançamentos.")
             }
             if let csv {
                 Section {
@@ -44,7 +44,7 @@ struct StatementImportView: View {
                     column("Identificador", value: $mapping.identifier, headers: csv.headers)
                     Button("Analisar colunas selecionadas") { Task { await analyzeCSV(csv) } }.disabled(isLoading)
                 } header: { Text("Colunas do CSV") } footer: {
-                    Text("Confirme as colunas antes de importar. Não use a coluna Saldo como valor. No Mercado Pago, prefira o impacto líquido na conta (SETTLEMENT_NET_AMOUNT). Para valores sem sinal, indique D/C ou use Débito e Crédito separados.")
+                    Text("Use valores movimentados, não o saldo. Mercado Pago: SETTLEMENT_NET_AMOUNT. Sem sinal: indique D/C ou Débito e Crédito.")
                 }
             }
             if !rows.isEmpty {
@@ -56,7 +56,7 @@ struct StatementImportView: View {
                         for index in rows.indices { rows[index].selected = (!rows[index].isDuplicate || rows[index].importAsNew) && rows[index].date <= FinanceDate.day(.now) && rows[index].signedCents != 0 && !rows[index].title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
                     }
                     Button("Desmarcar todos") { for index in rows.indices { rows[index].selected = false } }
-                    Text("Marcar todos inclui os movimentos válidos. Duplicados permanecem desmarcados, salvo quando identificados como outro movimento. Confira os dados do PDF antes de importar.")
+                    Text("Marca movimentos válidos. Confira PDFs e possíveis duplicados.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Section {
@@ -64,7 +64,7 @@ struct StatementImportView: View {
                         StatementReviewRow(row: $row, categories: categories)
                     }
                 } header: { Text("Lançamentos encontrados") } footer: {
-                    Text("Revise descrições, valores, categorias e duplicados. Uma nova importação do mesmo extrato não repete registros com a mesma identificação. Movimentos manuais e pagamentos de faturas já registrados também podem aparecer como possíveis duplicados.")
+                    Text("Confira valores e categorias. Possíveis duplicados ficam desmarcados.")
                 }
             }
             if !warnings.isEmpty {

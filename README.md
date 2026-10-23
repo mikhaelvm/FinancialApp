@@ -70,7 +70,7 @@ git commit -m "Refina Trackr e adiciona widgets, backup e importacao bancaria"
 git push
 ```
 
-Push em `main`/`master` inicia **Actions → Build Trackr IPA**. Também há **Run workflow**. Ao concluir, baixe **Artifacts → Trackr-unsigned**, extraia `Trackr.ipa` e assine/instale pelo seu fluxo habitual.
+Push em `main`/`master` inicia **Actions → Build Trackr IPA**. Também há **Run workflow**. Ao concluir, baixe **Artifacts → Trackr.ipa**, baixe o arquivo diretamente e assine/instale pelo seu fluxo habitual.
 
 O IPA contém `Trackr.app` e `PlugIns/TrackrWidgets.appex`. O instalador precisa preservar e assinar também a extensão para que os widgets apareçam. Widgets informativos precisam do App Group autorizado nos perfis de assinatura dos dois targets (veja abaixo). Não usam iCloud. A assinatura de dispositivo continua sendo uma etapa externa ao pipeline unsigned. [Execução em dispositivo — Apple](https://help.apple.com/xcode/mac/current/en.lproj/dev5a825a1ca.html).
 
@@ -235,7 +235,7 @@ Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **81 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também oito testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **81 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também nove testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 
@@ -244,3 +244,5 @@ Na validação em aparelho desta versão, confira Face ID/Touch ID, alternativa 
 Fechamentos e vencimentos de novas compras e previsões passam para a segunda-feira quando caem em sábado ou domingo. Feriados não são considerados. Datas de parcelas e pagamentos já gravados são preservadas.
 
 Recorrências: a edição permite suspender apenas a próxima renovação ou pausar indefinidamente, com aplicação ao salvar. Dispensados saem da lista após 30 dias do vencimento; identificadores mínimos permanecem para impedir reaparecimento nos atrasados, sem remover compras ou alterar o saldo.
+
+O envio do IPA usa `actions/upload-artifact@v7` com `archive: false`: baixe `Trackr.ipa` diretamente nos artefatos, sem ZIP externo. O IPA continua exigindo assinatura para instalação. Artefatos de builds anteriores mantêm o formato antigo.

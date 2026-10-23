@@ -59,7 +59,7 @@ struct CardPurchasesSection: View {
                 }
             }
         } header: { Text("Compras no cartão") } footer: {
-            Text("Toque para ver parcelas e opções de exclusão. Em compras parceladas, a exclusão remove a compra inteira. Previsões de recorrências são gerenciadas em Pagamentos.")
+            Text("Toque para ver ou excluir a compra e suas parcelas. Gerencie recorrências em Pagamentos.")
         }
         .sheet(item: $selected) { CardPurchaseDetailView(card: $0.card, purchaseID: $0.purchaseID) }
     }
@@ -95,7 +95,7 @@ struct CardPurchaseDetailView: View {
                     Section {
                         Button("Excluir compra e parcelas", role: .destructive) { confirming = true }.foregroundStyle(.red)
                     } footer: {
-                        Text(purchase.hasRecordedPayment ? "Pagamentos que excederem as cobranças restantes da fatura serão preservados como despesas no Extrato. O saldo da conta será mantido." : (purchase.isRecurring ? "A exclusão remove esta cobrança. Para interromper as próximas, pause a recorrência em Pagamentos." : "O limite e as faturas serão recalculados. O saldo da conta só muda com pagamentos de faturas."))
+                        Text(purchase.hasRecordedPayment ? "Pagamentos excedentes ficam no Extrato, preservando o saldo." : (purchase.isRecurring ? "Exclui esta cobrança. Para suspender as próximas, pause a recorrência." : "Recalcula limite e faturas. O saldo muda ao pagar."))
                     }
                 } else { ContentUnavailableView("Compra removida", systemImage: "bag") }
             }
@@ -106,7 +106,7 @@ struct CardPurchaseDetailView: View {
                     do { try CreditCardViewModel().deletePurchase(context: context, card: card, purchaseID: purchaseID); dismiss() }
                     catch { self.error = error.localizedDescription }
                 }
-            } message: { Text("Todas as parcelas registradas desta compra serão removidas do cartão e das faturas. Pagamentos efetivamente realizados serão mantidos no histórico financeiro.") }
+            } message: { Text("Exclui a compra e todas as parcelas. Pagamentos realizados ficam no histórico.") }
             .financeError($error)
         }
     }

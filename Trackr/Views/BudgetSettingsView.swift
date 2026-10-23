@@ -35,12 +35,12 @@ struct BudgetSettingsView: View {
             Section {
                 CurrencyTextField(placeholder: "Orçamento em reais", text: $budgetText)
             } header: { Text("Limite de gastos do mês") } footer: {
-                Text("Considera gastos na conta e parcelas com vencimento no mês, incluindo previsões de assinaturas. Não soma pagamentos de faturas novamente. Deixe vazio para desativar.")
+                Text("Inclui gastos na conta e faturas do mês, sem duplicar pagamentos. Vazio desativa.")
             }
             Section {
                 CurrencyTextField(placeholder: "Meta em reais", text: $goalText)
             } header: { Text("Meta de reserva") } footer: {
-                Text("Acompanha seu saldo consolidado em relação ao valor desejado. Definir uma meta não transfere dinheiro. Deixe vazio para desativar.")
+                Text("Compare o saldo com sua meta. Vazio desativa.")
             }
             Button("Salvar planejamento") {
                 guard (budgetText.isEmpty || Money.parse(budgetText) != nil), (goalText.isEmpty || Money.parse(goalText) != nil) else {

@@ -120,7 +120,7 @@ struct DashboardView: View {
                     ForEach(snapshot.forecasts) { item in MonthAmountRow(month: item.month, cents: item.invoiceCents) }
                 }
             } footer: {
-                Text("O saldo muda quando o dinheiro entra ou sai da conta. Compras no cartão entram nas faturas. Previsões incluem compromissos registrados, sem presumir receitas futuras.")
+                Text("Saldo realizado e compromissos registrados. Compras no cartão entram nas faturas.")
             }
         }
         .trackrListScreen("Resumo")

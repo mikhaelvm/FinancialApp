@@ -58,7 +58,7 @@ struct AddTransactionView: View {
                         CurrencyTextField(text: $amount, textStyle: .largeTitle)
                             .accessibilityLabel(mode == .installment ? "Valor total da compra" : "Valor em reais")
                     }.padding(.vertical, 8)
-                    Text(kind == .income ? "Dinheiro que você recebeu." : (mode == .installment ? "Informe o valor total da compra, antes de parcelar." : "Dinheiro que você gastou ou vai pagar."))
+                    Text(kind == .income ? "Dinheiro que você recebeu." : (mode == .installment ? "Informe o valor total da compra." : "Valor da despesa."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if !isEditing && kind == .expense {
@@ -101,10 +101,10 @@ struct AddTransactionView: View {
                         }
                     } header: { Text("Recorrência") } footer: {
                         Text(billingAction == .skipNext
-                             ? "Ao salvar, somente a renovação selecionada será pulada. As seguintes mantêm a periodicidade e o dia original. Nenhuma despesa é criada para a cobrança suspensa."
+                             ? "Pula uma cobrança ao salvar e mantém as datas seguintes."
                              : (billingAction == .pause
-                                ? "Ao salvar, os lançamentos futuros e os lembretes serão pausados até você reativar nesta edição. Isso não cancela o serviço contratado."
-                                : "Ao salvar, as próximas cobranças serão registradas automaticamente a partir da data de renovação escolhida."))
+                                ? "Pausa cobranças e alertas ao salvar. O serviço contratado não é cancelado."
+                                : "Registra cobranças a partir da renovação escolhida."))
                     }
                 }
                 if transaction == nil && mode != .scheduled && (mode != .single || kind == .expense) {
@@ -131,8 +131,8 @@ struct AddTransactionView: View {
                         }
                     } header: { Text("Pagamento") } footer: {
                         Text(mode == .subscription
-                             ? "Cobranças são lançadas ao abrir o app ou enquanto ele estiver ativo. Previsões futuras aparecem nas faturas."
-                             : "No cartão, o limite é comprometido pelo valor total. Compras no dia do fechamento vão para a próxima fatura.")
+                             ? "Cobranças são registradas com o app aberto. Faturas incluem previsões."
+                             : "O total compromete o limite. Compras no fechamento entram no próximo ciclo.")
                     }
                 }
             }

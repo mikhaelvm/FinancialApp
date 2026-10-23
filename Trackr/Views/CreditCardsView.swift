@@ -116,9 +116,9 @@ struct CardFormView: View {
                     }
                 }
                 Section {
-                    Text("Em meses curtos, usamos o último dia disponível. Fechamentos e vencimentos no fim de semana passam para segunda-feira, sem considerar feriados. Compras no dia do fechamento ajustado entram no próximo ciclo. Faturas já lançadas mantêm suas datas.")
+                    Text("Meses curtos usam o último dia; fins de semana passam para segunda, sem feriados. Faturas existentes mantêm as datas.")
                     if card != nil {
-                        Text("Alterações de dias valem para novas compras e projeções de assinaturas. Parcelas já lançadas mantêm as datas originais.")
+                        Text("Novos dias valem para compras e previsões futuras.")
                     }
                 }.font(.caption).foregroundStyle(.secondary)
                 if card != nil {

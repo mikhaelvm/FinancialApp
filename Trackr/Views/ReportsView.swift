@@ -38,7 +38,7 @@ struct ReportsView: View {
                 ForEach(snapshot.categories) { item in CategoryExpenseRow(item: item) }
                 if snapshot.categories.isEmpty { Text("Sem despesas neste mês").foregroundStyle(.secondary) }
             } header: { Text("Despesas por categoria") } footer: {
-                Text("Gastos na conta e parcelas por vencimento. Para meses futuros, valores de assinaturas são previsões. O resultado da conta usa apenas movimentos realizados.")
+                Text("Gastos e parcelas por mês. Assinaturas futuras são previsões; o resultado usa valores realizados.")
             }
             NavigationLink { CashFlowReviewView() } label: { Label("Evolução da conta em seis meses", systemImage: "chart.bar.xaxis") }
             NavigationLink { DataManagementView() } label: { Label("Exportar dados", systemImage: "square.and.arrow.up") }

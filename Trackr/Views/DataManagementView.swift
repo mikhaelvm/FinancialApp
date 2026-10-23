@@ -27,7 +27,7 @@ struct DataManagementView: View {
         Form {
             Section {
                 Label("Armazenamento neste iPhone", systemImage: "internaldrive")
-                Text("Seus registros ficam no dispositivo. Crie um backup para recuperá-los em outra instalação, sem depender de sincronização.")
+                Text("Dados locais. Exporte um backup para recuperá-los em outra instalação.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section {
@@ -35,7 +35,7 @@ struct DataManagementView: View {
                 Button("Importar backup", systemImage: "square.and.arrow.down") { importing = true }
                 LabeledContent("Último backup exportado", value: lastBackupExport > 0 ? Date(timeIntervalSince1970: lastBackupExport).formatted(date: .abbreviated, time: .shortened) : "Nenhum ainda")
             } header: { Text("Backup do Trackr") } footer: {
-                Text("Inclui categorias, cartões, compras, parcelas, faturas pagas, recorrências e contas agendadas. Escolha uma pasta no app Arquivos. A restauração adiciona registros ausentes e mantém os existentes. Preferências do aparelho não são alteradas.")
+                Text("Backup completo dos registros. A importação adiciona dados sem substituir os atuais ou as preferências.")
             }
             Section {
                 Button("Importar extrato bancário", systemImage: "building.columns") { importingStatement = true }
@@ -51,7 +51,7 @@ struct DataManagementView: View {
                 Button("Apagar todos os dados e redefinir", role: .destructive) { confirmingReset = true }
                     .foregroundStyle(.red)
             } header: { Text("Redefinir Trackr") } footer: {
-                Text("Remove lançamentos, cartões, pagamentos, recorrências e categorias personalizadas, cancela os lembretes e restaura as preferências. Os arquivos de backup que você exportou não serão apagados.")
+                Text("Apaga os dados, cancela alertas e restaura os padrões. Backups exportados são mantidos.")
             }
         }
         .trackrFormScreen("Dados e backup")
@@ -81,7 +81,7 @@ struct DataManagementView: View {
                 self.pending = nil
             }
         } message: {
-            Text("O arquivo tem \(pending?.count ?? 0) registros. Os dados atuais serão mantidos. Cobranças de recorrências ativas serão atualizadas ao voltar ao app.")
+            Text("Adiciona \(pending?.count ?? 0) registros sem apagar os atuais. Recorrências ativas serão atualizadas.")
         }
         .statementImporter(isPresented: $importingStatement)
         .alert("Apagar todos os dados?", isPresented: $confirmingReset) {
@@ -91,7 +91,7 @@ struct DataManagementView: View {
                 catch { self.error = error.localizedDescription }
             }
         } message: {
-            Text("Esta ação não pode ser desfeita. Exporte um backup antes se quiser preservar seus registros. A permissão de notificações do iOS continua sendo controlada pelos Ajustes do sistema.")
+            Text("Ação irreversível. Exporte um backup para preservar seus dados.")
         }
         .financeError($error)
     }

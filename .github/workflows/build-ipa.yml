@@ -105,11 +105,11 @@ jobs:
           zip -qry ../Trackr.ipa Payload
           unzip -t ../Trackr.ipa
 
-      - name: Upload unsigned IPA
-        uses: actions/upload-artifact@v4
+      - name: Upload Trackr.ipa
+        uses: actions/upload-artifact@v7
         with:
-          name: Trackr-unsigned
           path: build/Trackr.ipa
+          archive: false
           if-no-files-found: error
           retention-days: 14
 

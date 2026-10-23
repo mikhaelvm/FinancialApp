@@ -21,11 +21,6 @@ struct TransactionsView: View {
     @Environment(TrackrRouter.self) private var router
     @State private var error: String?
 
-    private var availableMonths: [Date] {
-        Set(transactions.map { FinanceDate.month($0.date) }
-            + payments.map { FinanceDate.month($0.date) }
-            + [FinanceDate.month(.now), selectedMonth]).sorted(by: >)
-    }
     private var cash: [Transaction] {
         transactions.filter {
             $0.card == nil && FinanceDate.sameMonth($0.date, selectedMonth) && (kind == nil || $0.kind == kind)
@@ -53,11 +48,10 @@ struct TransactionsView: View {
                         Image(systemName: "chevron.left").padding(.vertical, 8)
                     }.buttonStyle(.plain).accessibilityLabel("Mês anterior")
                     Spacer(minLength: 8)
-                    Picker("Mês", selection: $selectedMonth) {
-                        ForEach(availableMonths, id: \.self) { month in
-                            Text(FinanceDate.monthTitle(month)).tag(month)
-                        }
-                    }.labelsHidden().accessibilityLabel("Mês do extrato")
+                    Text(FinanceDate.monthTitle(selectedMonth))
+                        .font(.headline).foregroundStyle(Color.primary)
+                        .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
                     Spacer(minLength: 8)
                     Button { selectedMonth = FinanceDate.monthOffset(1, from: selectedMonth) } label: {
                         Image(systemName: "chevron.right").padding(.vertical, 8)
@@ -107,7 +101,7 @@ struct TransactionsView: View {
                         Button { viewingPurchase = purchase } label: { CardPurchaseRow(purchase: purchase) }.buttonStyle(.plain)
                     }
                 } header: { Text("Compras nos cartões") } footer: {
-                    Text("Organizadas pela data da compra, com o valor total e as parcelas nos detalhes. Não são descontadas novamente do saldo ao serem listadas aqui.")
+                    Text("Total por data da compra. Toque para ver parcelas; o débito ocorre ao pagar a fatura.")
                 }
             }
             if !visiblePayments.isEmpty {
