@@ -94,7 +94,7 @@ struct GoogleDriveAPI {
             headers: ["X-Upload-Content-Type": "application/json", "X-Upload-Content-Length": String(data.count)])
         guard let location = response.value(forHTTPHeaderField: "Location"), let destination = URL(string: location),
               destination.scheme == "https", destination.host == "www.googleapis.com", destination.path.hasPrefix("/upload/drive/") else {
-            throw FinanceError.invalid("O Drive n„o iniciou o envio. Tente novamente.")
+            throw FinanceError.invalid("O Drive n√£o iniciou o envio. Tente novamente.")
         }
         let (result, _) = try await send(destination, token: token, method: "PUT", body: data, contentType: "application/json")
         return try JSONDecoder().decode(DriveBackupFile.self, from: result)

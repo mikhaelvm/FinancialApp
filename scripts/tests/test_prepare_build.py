@@ -116,6 +116,16 @@ class BuildSpecTests(unittest.TestCase):
         self.assertEqual(workflow.count('SWIFT_ENABLE_EXPLICIT_MODULES=NO'), 2)
         self.assertIn('build/ci-logs/', workflow)
 
+    def test_project_text_files_are_valid_utf8(self):
+        root = Path(__file__).resolve().parents[2]
+        suffixes = {'.swift', '.plist', '.strings', '.entitlements', '.json', '.svg', '.py', '.md', '.yml'}
+        files = [root / 'project.yml', root / 'README.md']
+        for directory in ['Trackr', 'TrackrWidgets', 'Shared', 'Tests', 'scripts', 'docs', '.github']:
+            files.extend(path for path in (root / directory).rglob('*') if path.is_file() and path.suffix in suffixes)
+        for path in files:
+            with self.subTest(path=str(path.relative_to(root))):
+                path.read_bytes().decode('utf-8-sig')
+
     def test_app_identity_and_face_id_permission_are_present(self):
         import plistlib
         root = Path(__file__).resolve().parents[2]
