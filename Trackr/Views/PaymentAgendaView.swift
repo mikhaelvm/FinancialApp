@@ -14,6 +14,7 @@ struct PaymentAgendaView: View {
     @Query(sort: \ScheduledPayment.dueDate) private var scheduled: [ScheduledPayment]
     @State private var filter: AgendaFilter = .upcoming
     @State private var showAdd = false
+    @State private var showLater = false
     @State private var showSettings = false
     @State private var editing: ScheduledPayment?
     @State private var confirming: ScheduledPayment?
@@ -32,7 +33,16 @@ struct PaymentAgendaView: View {
     private var filtered: [PaymentCommitment] {
         PaymentPlanner.agendaItems(commitments).filter { filter == .overdue ? $0.isOverdue() : !$0.isOverdue() }
     }
-    private var dates: [Date] { Array(Set(filtered.map(\.dueDate))).sorted() }
+    private var upcomingCutoff: Date {
+        FinanceDate.calendar.date(byAdding: .day, value: 30, to: FinanceDate.day(.now))!
+    }
+    private var visible: [PaymentCommitment] {
+        filtered.filter { filter != .upcoming || FinanceDate.day($0.dueDate) <= upcomingCutoff }
+    }
+    private var later: [PaymentCommitment] {
+        guard filter == .upcoming else { return [] }
+        return filtered.filter { FinanceDate.day($0.dueDate) > upcomingCutoff }
+    }
     private var nextWeekCents: Int64 {
         let end = FinanceDate.calendar.date(byAdding: .day, value: 7, to: FinanceDate.day(.now))!
         return commitments.filter { !$0.isOverdue() && $0.dueDate <= end && $0.affectsCashFlow }
@@ -47,9 +57,6 @@ struct PaymentAgendaView: View {
                                     subtitle: "Faturas, contas e recorrências.",
                                     symbol: "calendar.badge.clock")
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
-            }
-            Section("Lembretes de vencimento") {
-                Button("Configurar notificações e Siri") { showSettings = true }
             }
         } secondary: {
             Section {
@@ -98,34 +105,41 @@ struct PaymentAgendaView: View {
                         }
                     }
                 }
-            } else if filtered.isEmpty {
-                ContentUnavailableView(filter == .overdue ? "Nenhum atraso" : "Agenda tranquila", systemImage: "calendar.badge.checkmark",
-                                       description: Text(filter == .overdue ? "Seus compromissos estão em dia." : "Adicione contas ou recorrências para começar."))
             } else {
-                ForEach(dates, id: \.self) { date in
+                if visible.isEmpty {
+                    ContentUnavailableView(filter == .overdue ? "Nenhum atraso" : "Próximos 30 dias livres", systemImage: "calendar.badge.checkmark",
+                                           description: Text(filter == .overdue ? "Seus compromissos estão em dia." : "Nenhum pagamento a vencer nesse período."))
+                }
+                ForEach(Array(Set(visible.map(\.dueDate))).sorted(), id: \.self) { date in
                     Section(dateTitle(date)) {
-                        ForEach(filtered.filter { $0.dueDate == date }) { item in
-                            Button { open(item) } label: { PaymentCommitmentRow(item: item) }.buttonStyle(.plain)
-                                .contextMenu {
-                                    if item.kind != .subscription {
-                                        Button("Dispensar", systemImage: "minus.circle") { dismissing = item }
-                                    }
-                                }
-                                .swipeActions(allowsFullSwipe: false) {
-                                    if item.kind != .subscription {
-                                        Button("Dispensar", systemImage: "minus.circle") { dismissing = item }.tint(.gray)
-                                    }
-                                    if item.kind == .scheduled, let payment = scheduled.first(where: { $0.id == item.sourceID }) {
-                                        Button("Pago", systemImage: "checkmark") { confirming = payment }.tint(TrackrTheme.accent)
-                                        Button("Excluir", role: .destructive) { deleting = payment }.tint(.red)
-                                    }
-                                }
+                        ForEach(visible.filter { $0.dueDate == date }) { item in agendaRow(item) }
+                    }
+                }
+                if !later.isEmpty {
+                    Section {
+                        Button { showLater.toggle() } label: {
+                            HStack {
+                                Text("Após os próximos 30 dias").foregroundStyle(Color.primary)
+                                Spacer(minLength: 8)
+                                Text("\(later.count)").foregroundStyle(.secondary)
+                                Image(systemName: showLater ? "chevron.up" : "chevron.down")
+                                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                        }.buttonStyle(.plain)
+                            .accessibilityValue(showLater ? "Expandido" : "Recolhido")
+                        if showLater {
+                            ForEach(later) { item in agendaRow(item) }
                         }
                     }
                 }
             }
+            Section("Lembretes de vencimento") {
+                Button("Configurar notificações e Siri") { showSettings = true }
+            }
+
         }
         .trackrListScreen("Pagamentos")
+        .onChange(of: filter) { _, _ in showLater = false }
         .toolbar { TrackrToolbarButton("Agendar pagamento", systemImage: "plus") { showAdd = true } }
         .sheet(isPresented: $showAdd) { ScheduledPaymentForm() }
         .sheet(item: $editing) { ScheduledPaymentForm(payment: $0) }
@@ -159,6 +173,24 @@ struct PaymentAgendaView: View {
             Text(deleting?.isPaid == true ? "Mantenha a despesa no Extrato ou exclua os dois registros." : "Remove esta conta e seus alertas.")
         }
         .financeError($error)
+    }
+
+    private func agendaRow(_ item: PaymentCommitment) -> some View {
+        Button { open(item) } label: { PaymentCommitmentRow(item: item) }.buttonStyle(.plain)
+            .contextMenu {
+                if item.kind != .subscription {
+                    Button("Dispensar", systemImage: "minus.circle") { dismissing = item }
+                }
+            }
+            .swipeActions(allowsFullSwipe: false) {
+                if item.kind != .subscription {
+                    Button("Dispensar", systemImage: "minus.circle") { dismissing = item }.tint(.gray)
+                }
+                if item.kind == .scheduled, let payment = scheduled.first(where: { $0.id == item.sourceID }) {
+                    Button("Pago", systemImage: "checkmark") { confirming = payment }.tint(TrackrTheme.accent)
+                    Button("Excluir", role: .destructive) { deleting = payment }.tint(.red)
+                }
+            }
     }
 
     private func dateTitle(_ date: Date) -> String {
