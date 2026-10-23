@@ -198,6 +198,7 @@ final class GoogleDriveBackupService {
         defer { finishOperation() }
         let currentRevision = revision
         var state = try DriveSyncCache.load(account: account)
+        let previousReplacement = state.document.replacement
         let access = try await token()
         let remoteFiles = try await api.list(token: access, synchronization: true)
         guard remoteFiles.count <= 256 else { throw FinanceError.invalid("Muitos aparelhos registrados no Drive. Exporte uma cópia local e revise a conta.") }
@@ -221,7 +222,7 @@ final class GoogleDriveBackupService {
         let snapshot = try BackupService.snapshot(context: context)
         let current = try DriveSyncState.index(snapshot)
         let hasFinancialData = snapshot.count > snapshot.categories.count
-        try state.document.capture(current, baseline: state.baseline, preferLocal: remoteFiles.isEmpty && hasFinancialData)
+        try state.captureLocal(current, previousReplacement: previousReplacement, preferLocal: remoteFiles.isEmpty && hasFinancialData)
         let merged = try state.materialize()
         let mergedIndex = try DriveSyncState.index(merged)
         // Save pending revisions before applying or uploading. A failed upload
@@ -231,7 +232,7 @@ final class GoogleDriveBackupService {
         if current != mergedIndex { try DriveSyncPersistence.apply(merged, context: context) }
         state.baseline = mergedIndex
         try DriveSyncCache.save(state, account: account)
-        if ownDocument?.records != state.document.records {
+        if ownDocument?.records != state.document.records || ownDocument?.replacement != state.document.replacement {
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             _ = try await api.upload(encoder.encode(state.document), token: access, device: state.document.owner, updating: ownFile?.id)
         }
@@ -240,6 +241,81 @@ final class GoogleDriveBackupService {
         UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: "trackr.drive.lastSync")
         message = "Dados sincronizados."
         scheduleBackground()
+    }
+
+    func restoreReplacing(_ backup: TrackrBackup, context: ModelContext) async {
+        // A background refresh may have started while the confirmation dialog
+        // was open. Wait for it instead of silently ignoring the user's rollback.
+        do {
+            while isBusy { try await Task.sleep(for: .milliseconds(150)); try Task.checkCancellation() }
+        } catch { return }
+        guard isConnected, !AppLockService.shared.isLocked, let account = accountKey else { return }
+        isBusy = true; error = nil; message = nil
+        pending?.cancel(); pending = nil
+        defer { finishOperation() }
+        let currentRevision = revision
+        var applied = false
+        do {
+            try backup.validate()
+            var state = try DriveSyncCache.load(account: account)
+            let access = try await token()
+            let remoteFiles = try await api.list(token: access, synchronization: true)
+            guard remoteFiles.count <= 256 else { throw FinanceError.invalid("Muitos aparelhos registrados nesta conta.") }
+            var ownFile: DriveBackupFile?
+            for file in remoteFiles {
+                let remote = try JSONDecoder().decode(DriveSyncDocument.self, from: try await api.download(file, token: access))
+                if remote.owner == state.document.owner, ownFile == nil { ownFile = file }
+                try state.document.merge(remote)
+            }
+            try Task.checkCancellation()
+            guard currentRevision == revision, !AppLockService.shared.isLocked else { return }
+            // Preserve the state that is about to be replaced as an independent backup.
+            let currentData = try BackupService.encode(BackupService.snapshot(context: context))
+            _ = try await api.upload(currentData, token: access)
+            try Task.checkCancellation()
+            guard currentRevision == revision, !AppLockService.shared.isLocked else { return }
+            let before = try DriveSyncState.index(BackupService.snapshot(context: context))
+            state.document.replace(with: try DriveSyncState.index(backup))
+            let target = try state.materialize()
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            let replacementData = try encoder.encode(state.document)
+            guard replacementData.count <= DriveBackupPolicy.maximumBytes else { throw FinanceError.invalid("A versão excede o limite de 25 MB da sincronização.") }
+            state.baseline = before
+            try DriveSyncCache.save(state, account: account)
+            try DriveSyncPersistence.apply(target, context: context)
+            applied = true
+            state.baseline = try DriveSyncState.index(target)
+            try DriveSyncCache.save(state, account: account)
+            _ = try await api.upload(replacementData, token: access, device: state.document.owner, updating: ownFile?.id)
+            guard currentRevision == revision else { return }
+            let now = Date.now.timeIntervalSince1970
+            UserDefaults.standard.set(now, forKey: "trackr.drive.lastBackup")
+            UserDefaults.standard.set(now, forKey: "trackr.drive.lastSync")
+            UserDefaults.standard.removeObject(forKey: "trackr.drive.fingerprint")
+            message = "Versão restaurada no Drive. Os outros aparelhos atualizam ao sincronizar."
+            files = []
+            do {
+                let versions = try await api.list(token: access)
+                for file in versions.dropFirst(DriveBackupPolicy.retainedVersions) {
+                    try Task.checkCancellation()
+                    guard currentRevision == revision else { return }
+                    try await api.delete(file, token: access)
+                }
+                if currentRevision == revision { files = Array(versions.prefix(DriveBackupPolicy.retainedVersions)) }
+            } catch { message = "Versão restaurada no Drive. A lista de backups não pôde ser atualizada." }
+        } catch {
+            if currentRevision == revision {
+                self.error = applied ? "Versão restaurada neste aparelho. Falta enviar ao Drive; use Sincronizar agora. " + error.localizedDescription : error.localizedDescription
+            }
+        }
+    }
+
+    func refreshFromGesture(context: ModelContext) async throws {
+        await initialize()
+        while isBusy { try await Task.sleep(for: .milliseconds(150)); try Task.checkCancellation() }
+        guard isConnected else { throw FinanceError.invalid("Conecte o Google Drive em Ajustes → Dados e backup.") }
+        guard synchronization else { throw FinanceError.invalid("Ative a sincronização entre aparelhos nos ajustes do Google Drive.") }
+        try await synchronize(context: context)
     }
 
     func synchronizeNow(context: ModelContext) async {

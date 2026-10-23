@@ -2,6 +2,15 @@
 
 Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, com sincronização opcional pelo Google Drive, sem CloudKit ou servidor próprio. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
+## Versão 2.3.0 — pagamentos, edição e rollback
+
+- Pagamentos de faturas podem ser excluídos no Extrato ou nos detalhes do cartão, com menu, gesto de arrastar e confirmação. A exclusão devolve o valor ao saldo e reabre a pendência da fatura, mantendo as compras.
+- O registro de pagamento abre um formulário com data entre o fechamento e hoje; o débito aparece no mês selecionado.
+- Compras no cartão podem ser editadas no detalhe: título, categoria, valor total, data e parcelas. Preserva identidades das parcelas existentes, recalcula faturas quando necessário e realoca pagamentos já feitos sem novo débito, preservando suas datas. Uma cobrança recorrente editada não altera as próximas.
+- No Google Drive, selecione um backup e escolha **Substituir todos os dados por esta versão** para rollback, ou **Adicionar registros** para a restauração aditiva. Antes da substituição, salva uma cópia do estado atual no Drive. A substituição é propagada aos demais aparelhos e descarta alterações offline da geração anterior.
+- Atualize os dois aparelhos para 2.3 antes de usar rollback. O formato de sincronização V2 evita que uma versão antiga desfaça a substituição; os backups JSON anteriores continuam compatíveis.
+- Puxe as listas para baixo para sincronizar. Funciona também nas duas colunas do iPad e na grade de cartões, agora apoiada em uma lista nativa.
+
 ## Versão 2.2.0 — iPhone, iPad e sincronização
 
 - Google Drive sincroniza registros, edições, exclusões e dispensas entre aparelhos na mesma conta. A primeira conexão busca os dados automaticamente, inclusive o último backup da versão anterior quando ainda não há sincronização.
@@ -246,7 +255,7 @@ Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **103 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também dezenove testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **120 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também dezenove testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 

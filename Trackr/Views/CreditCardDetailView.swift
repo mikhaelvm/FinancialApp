@@ -12,6 +12,7 @@ struct CreditCardDetailView: View {
     @State private var showPurchase = false
     @State private var showCommittedLimit = false
     @State private var confirmPayment = false
+    @State private var paymentDue: Date?
     @State private var error: String?
 
     private var invoices: [Invoice] {
@@ -69,13 +70,20 @@ struct CreditCardDetailView: View {
                         MoneyRow(title: "Pendente", cents: invoice.remainingCents, symbol: "clock", tint: .orange)
                         if FinanceDate.day(.now) >= invoice.closingDate && invoice.payableCents > 0 {
                             Button("Registrar pagamento de \(Money.format(invoice.payableCents))", systemImage: "checkmark.seal") {
-                                confirmPayment = true
+                                paymentDue = invoice.dueDate; confirmPayment = true
                             }
                         }
                     }
                 }
             } header: { Text("Faturas") } footer: {
                 Text("Registrar pagamento representa uma saída da conta e libera o limite. O app não movimenta dinheiro no banco.")
+            }
+            if let selected, card.payments.contains(where: { $0.invoiceDueDate == selected.dueDate }) {
+                Section("Pagamentos desta fatura") {
+                    ForEach(card.payments.filter { $0.invoiceDueDate == selected.dueDate }.sorted { $0.date > $1.date }) { payment in
+                        InvoicePaymentRow(payment: payment)
+                    }
+                }
             }
             CardPurchasesSection(card: card, invoice: selected)
         } secondary: {
@@ -116,14 +124,8 @@ struct CreditCardDetailView: View {
         }
         .sheet(isPresented: $showEdit, onDismiss: { if card.modelContext == nil { dismiss() } }) { CardFormView(card: card) }
         .sheet(isPresented: $showPurchase) { AddTransactionView(initialCard: card) }
-        .confirmationDialog("Confirmar pagamento da fatura?", isPresented: $confirmPayment, titleVisibility: .visible) {
-            Button("Registrar pagamento") {
-                guard let selected else { return }
-                do { try CreditCardViewModel().pay(context: context, card: card, invoice: selected) }
-                catch { self.error = error.localizedDescription }
-            }
-        } message: {
-            Text("O valor será descontado do saldo consolidado. Confirme somente se o pagamento já foi feito.")
+        .sheet(isPresented: $confirmPayment) {
+            if let paymentDue { InvoicePaymentForm(card: card, dueDate: paymentDue) }
         }
         .financeError($error)
     }

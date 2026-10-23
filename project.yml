@@ -19,8 +19,8 @@ settings:
     SWIFT_ENABLE_EXPLICIT_MODULES: NO
     IPHONEOS_DEPLOYMENT_TARGET: '17.0'
     TARGETED_DEVICE_FAMILY: '1,2'
-    MARKETING_VERSION: '2.2.0'
-    CURRENT_PROJECT_VERSION: '11'
+    MARKETING_VERSION: '2.3.0'
+    CURRENT_PROJECT_VERSION: '12'
     CODE_SIGNING_ALLOWED: NO
     # Public OAuth identifiers: configure using docs/GOOGLE_DRIVE.md. No client secret.
     TRACKR_GOOGLE_CLIENT_ID: '650817344060-b91mi8tcifbng3nv404gk2r57vn5kfid.apps.googleusercontent.com'

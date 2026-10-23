@@ -59,7 +59,7 @@ struct CardPurchasesSection: View {
                 }
             }
         } header: { Text("Compras no cartão") } footer: {
-            Text("Toque para ver ou excluir a compra e suas parcelas. Gerencie recorrências em Pagamentos.")
+            Text("Toque para editar ou excluir a compra e suas parcelas. Gerencie recorrências em Pagamentos.")
         }
         .sheet(item: $selected) { CardPurchaseDetailView(card: $0.card, purchaseID: $0.purchaseID) }
     }
@@ -71,8 +71,12 @@ struct CardPurchaseDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var confirming = false
+    @State private var editing = false
     @State private var error: String?
-    private var purchase: CardPurchaseGroup? { CardPurchaseService.groups(for: card).first { $0.purchaseID == purchaseID } }
+    private var purchase: CardPurchaseGroup? {
+        guard card.modelContext != nil else { return nil }
+        return CardPurchaseService.groups(for: card).first { $0.purchaseID == purchaseID }
+    }
     var body: some View {
         NavigationStack {
             List {
@@ -93,6 +97,7 @@ struct CardPurchaseDetailView: View {
                         }
                     }
                     Section {
+                        Button("Editar compra", systemImage: "pencil") { editing = true }
                         Button("Excluir compra e parcelas", role: .destructive) { confirming = true }.foregroundStyle(.red)
                     } footer: {
                         Text(purchase.hasRecordedPayment ? "Pagamentos excedentes ficam no Extrato, preservando o saldo." : (purchase.isRecurring ? "Exclui esta cobrança. Para suspender as próximas, pause a recorrência." : "Recalcula limite e faturas. O saldo muda ao pagar."))
@@ -101,6 +106,7 @@ struct CardPurchaseDetailView: View {
             }
             .trackrListScreen("Compra no cartão", largeTitle: false)
             .toolbar { ToolbarItem(placement: .confirmationAction) { TrackrToolbarButton("Concluir", systemImage: "checkmark") { dismiss() } } }
+            .sheet(isPresented: $editing) { CardPurchaseEditView(card: card, purchaseID: purchaseID) }
             .confirmationDialog("Excluir esta compra?", isPresented: $confirming, titleVisibility: .visible) {
                 Button("Excluir compra e todas as parcelas", role: .destructive) {
                     do { try CreditCardViewModel().deletePurchase(context: context, card: card, purchaseID: purchaseID); dismiss() }

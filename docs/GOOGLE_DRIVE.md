@@ -74,7 +74,14 @@ Aparência, ocultação de valores, biometria, orçamento, metas e preferências
 
 ## 6. Backups independentes da sincronização
 
-**Fazer backup agora** cria uma cópia datada; **Backup automático** é opcional e cria versões somente quando os dados mudam. Mantém as cinco versões mais recentes após confirmar o novo envio. Os documentos de sincronização não entram nessa limpeza. A restauração em **Buscar backups** adiciona registros ausentes e preserva os atuais; dados restaurados passam a fazer parte da sincronização, se ela estiver ligada.
+**Fazer backup agora** cria uma cópia datada; **Backup automático** é opcional e cria versões somente quando os dados mudam. Mantém as cinco versões mais recentes após confirmar o novo envio. Os documentos de sincronização não entram nessa limpeza. Em **Buscar backups**, há duas opções:
+
+- **Adicionar registros:** inclui os ausentes e preserva os atuais.
+- **Substituir todos os dados por esta versão:** restaura o conjunto completo de registros financeiros, inclusive versões anteriores de registros editados, e remove os que não existiam no backup. Antes de alterar o aparelho, envia uma cópia do estado atual ao Drive. O rollback é enviado à mesma conta e os demais aparelhos o aplicam na próxima sincronização. Alterações offline anteriores ao rollback são descartadas. Preferências locais de aparência, orçamento, metas e proteção continuam mantidas. Recorrências automáticas podem gerar novamente cobranças devidas após a data do backup.
+
+Use Trackr **2.3 ou superior em todos os aparelhos** antes do rollback. O documento de sincronização passa ao formato V2 após a primeira substituição; versões anteriores do app precisam atualizar para continuar sincronizando. Backups JSON de versões anteriores continuam sendo aceitos. Se o envio falhar após a substituição local, o app informa que falta sincronizar e conserva a operação para nova tentativa. Uma falha ao criar a cópia de segurança anterior à substituição interrompe o rollback, mantendo os dados locais.
+
+Também é possível sincronizar puxando uma lista para baixo, inclusive as colunas e os cartões do iPad. Sem conexão configurada ou com a sincronização desativada, o gesto orienta a ativação nos ajustes.
 
 A área privada não aparece como pasta navegável no Drive. Desconectar interrompe a sincronização e os backups automáticos, mas mantém dados locais e arquivos remotos. **Apagar todos os dados** redefine somente o aparelho e esquece seu histórico local de sincronização, sem enviar uma exclusão em massa para os outros aparelhos. Reconectar pode trazer os dados da conta novamente. Os arquivos remotos podem ser removidos nas opções de aplicativos conectados do Google.
 
@@ -88,6 +95,8 @@ Os registros viajam em JSON por HTTPS. O Trackr não adiciona criptografia com s
 - Dispensar e reativar pagamentos; conferir a Agenda e o Resumo nos dois aparelhos.
 - Cobranças automáticas geradas nos dois aparelhos não duplicam os valores.
 - Backup manual, listagem das cinco versões e restauração aditiva.
+- Rollback: editar e criar registros após um backup, substituí-los pela versão antiga e verificar os dois aparelhos; um aparelho offline deve aceitar a substituição sem reenviar seus registros antigos.
+- Confirmar a cópia de segurança anterior ao rollback e o aviso de sincronização pendente se o envio for interrompido.
 - Conta desconectada, sessão expirada, sem rede e espaço insuficiente: dados locais permanecem utilizáveis.
 - Bloqueio de acesso e redefinição respeitam as regras descritas acima.
 - iPad horizontal, vertical e Split View: colunas e grade somente em janela horizontal com pelo menos 950 pontos; Dynamic Type de acessibilidade mantém uma coluna.

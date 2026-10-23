@@ -20,7 +20,7 @@ struct TrackrSurface: ViewModifier {
 extension View {
     func trackrSurface() -> some View { modifier(TrackrSurface()) }
     func trackrListScreen(_ title: String, largeTitle: Bool = true) -> some View {
-        self.listStyle(.insetGrouped)
+        self.modifier(TrackrRefreshModifier()).listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Color(uiColor: .systemGroupedBackground))
             .scrollDismissesKeyboard(.interactively)

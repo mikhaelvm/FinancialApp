@@ -4,6 +4,14 @@ import CryptoKit
 /// Each installation writes its own document. No device overwrites another
 /// device's file; logical revisions and tombstones converge when files merge.
 struct DriveSyncDocument: Codable, Equatable {
+    struct Replacement: Codable, Equatable {
+        let revision: Int64
+        let writer: UUID
+        func supersedes(_ other: Self?) -> Bool {
+            guard let other else { return true }
+            return revision == other.revision ? writer.uuidString > other.writer.uuidString : revision > other.revision
+        }
+    }
     struct Record: Codable, Equatable {
         let revision: Int64
         let writer: UUID
@@ -17,18 +25,28 @@ struct DriveSyncDocument: Codable, Equatable {
             return (payload ?? Data()).lexicographicallyPrecedes(other.payload ?? Data())
         }
     }
+    // V2 adds an explicit replacement generation for cross-device rollback.
+    // Older clients reject V2 instead of silently undoing the replacement.
     var formatVersion = 1
     var owner = UUID()
     var clock: Int64 = 0
     var records: [String: Record] = [:]
+    var replacement: Replacement?
 
     mutating func merge(_ remote: Self) throws {
-        guard remote.formatVersion == 1, remote.records.count <= 200_000,
+        guard (1...2).contains(remote.formatVersion), remote.records.count <= 200_000,
               remote.clock >= 0, remote.clock < Int64.max - 1,
-              remote.records.allSatisfy({ $0.key.count <= 300 && $0.value.revision > 0 && $0.value.revision <= remote.clock }) else {
+              remote.replacement.map({ $0.revision > 0 && $0.revision <= remote.clock }) ?? true,
+              remote.replacement == nil || remote.formatVersion == 2,
+              remote.records.allSatisfy({ $0.key.count <= 300 && $0.value.revision > 0 && $0.value.revision <= remote.clock
+                  && $0.value.revision >= (remote.replacement?.revision ?? 0) }) else {
             throw FinanceError.invalid("Dados de sincronização incompatíveis. Atualize o Trackr.")
         }
         clock = max(clock, remote.clock)
+        if let incoming = remote.replacement, incoming.supersedes(replacement) {
+            replacement = incoming; records = remote.records; return
+        }
+        guard replacement == remote.replacement else { return }
         for (key, record) in remote.records {
             if let existing = records[key] {
                 var winner = record.supersedes(existing) ? record : existing
@@ -48,6 +66,15 @@ struct DriveSyncDocument: Codable, Equatable {
             } else { records[key] = record }
         }
         guard records.count <= 200_000 else { throw FinanceError.invalid("Limite de registros de sincronização atingido.") }
+    }
+
+    /// A rollback starts a new generation, so an offline device cannot revive
+    /// post-backup records before accepting the replacement.
+    mutating func replace(with snapshot: [String: Data]) {
+        clock += 1
+        replacement = Replacement(revision: clock, writer: owner)
+        records = snapshot.mapValues { Record(revision: clock, writer: owner, payload: $0) }
+        formatVersion = 2
     }
 
     mutating func write(_ changes: [String: Data?]) {
@@ -96,6 +123,13 @@ struct DriveSyncDocument: Codable, Equatable {
 struct DriveSyncState: Codable {
     var document = DriveSyncDocument()
     var baseline: [String: Data]?
+
+    mutating func captureLocal(_ current: [String: Data], previousReplacement: DriveSyncDocument.Replacement?, preferLocal: Bool = false) throws {
+        // A rollback replaces offline edits from the old generation as well.
+        if document.replacement != previousReplacement { baseline = current }
+        document.formatVersion = document.replacement == nil ? 1 : 2
+        try document.capture(current, baseline: baseline, preferLocal: preferLocal)
+    }
 
     static func stableID(_ text: String) -> UUID {
         let bytes = Array(SHA256.hash(data: Data(text.utf8)).prefix(16))

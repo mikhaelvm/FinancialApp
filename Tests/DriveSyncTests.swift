@@ -190,4 +190,94 @@ import SwiftData
         XCTAssertFalse(result.isActive)
         XCTAssertEqual(result.nextOccurrenceIndex, 3)
     }
+
+    func testRollbackReplacesEditsAndRemovesRecordsCreatedAfterBackup() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let transaction = Transaction(title: "Versão antiga", amountCents: 100, kind: .income, date: .now)
+        context.insert(transaction); try context.save()
+        let oldBackup = try BackupService.snapshot(context: context)
+        transaction.title = "Versão recente"; transaction.amountCents = 200
+        context.insert(Transaction(title: "Depois do backup", amountCents: 300, kind: .income, date: .now))
+        try context.save()
+        var state = DriveSyncState()
+        try state.document.capture(snapshot(context), baseline: nil)
+        state.document.replace(with: try DriveSyncState.index(oldBackup))
+        try DriveSyncPersistence.apply(state.materialize(), context: context)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 1)
+        XCTAssertEqual(transaction.title, "Versão antiga")
+        XCTAssertEqual(transaction.amountCents, 100)
+        XCTAssertEqual(try snapshot(context), try DriveSyncState.index(oldBackup))
+    }
+
+    func testOfflineDeviceAcceptsRollbackWithoutReuploadingItsOldGenerationEdits() throws {
+        var phone = DriveSyncDocument(), tablet = DriveSyncState()
+        let original = ["row": Data("original".utf8)]
+        try phone.capture(original, baseline: nil)
+        try tablet.document.merge(phone); tablet.baseline = original
+        let previous = tablet.document.replacement
+        // The tablet is offline while the phone rolls back to an empty snapshot.
+        phone.replace(with: [:])
+        try tablet.document.merge(phone)
+        let offline = ["row": Data("offline edit".utf8), "new": Data("offline new row".utf8)]
+        try tablet.captureLocal(offline, previousReplacement: previous)
+        XCTAssertTrue(tablet.document.records.isEmpty)
+        XCTAssertEqual(tablet.document.replacement, phone.replacement)
+        try phone.merge(tablet.document)
+        XCTAssertTrue(phone.records.isEmpty)
+    }
+
+    func testHighRevisionFromOldGenerationCannotUndoReplacementAndNewEditsStillWork() throws {
+        var phone = DriveSyncDocument(), stale = DriveSyncDocument()
+        try phone.capture(["row": Data("old".utf8)], baseline: nil); try stale.merge(phone)
+        phone.replace(with: ["row": Data("restored".utf8)])
+        for index in 0..<20 { stale.write(["row": Data("offline \(index)".utf8)]) }
+        try phone.merge(stale)
+        XCTAssertEqual(phone.records["row"]?.payload, Data("restored".utf8))
+        let restored = ["row": Data("restored".utf8)]
+        try phone.capture(["row": Data("new edit after restore".utf8)], baseline: restored)
+        try stale.merge(phone)
+        XCTAssertEqual(stale.records, phone.records)
+        XCTAssertEqual(stale.replacement, phone.replacement)
+    }
+
+    func testConcurrentRollbacksResolveDeterministically() throws {
+        var phone = DriveSyncDocument(), tablet = DriveSyncDocument()
+        phone.replace(with: ["row": Data("phone backup".utf8)])
+        tablet.replace(with: ["row": Data("tablet backup".utf8)])
+        let originalPhone = phone, originalTablet = tablet
+        try phone.merge(originalTablet); try tablet.merge(originalPhone)
+        XCTAssertEqual(phone.replacement, tablet.replacement)
+        XCTAssertEqual(phone.records, tablet.records)
+    }
+
+    func testRollbackCanRewindRecurrenceProgressToTheBackupVersion() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let subscription = Subscription(title: "Serviço", amountCents: 1000, cycle: .monthly, nextRenewalDate: .now, category: nil, card: nil)
+        context.insert(subscription); try context.save()
+        let backup = try BackupService.snapshot(context: context)
+        subscription.nextOccurrenceIndex = 8
+        subscription.nextRenewalDate = FinanceDate.monthOffset(8, from: subscription.anchorDate)
+        try context.save()
+        var phone = DriveSyncState(), tablet = DriveSyncDocument()
+        try phone.document.capture(snapshot(context), baseline: nil); try tablet.merge(phone.document)
+        phone.document.replace(with: try DriveSyncState.index(backup))
+        try tablet.merge(phone.document)
+        phone.document = tablet
+        XCTAssertEqual(try phone.materialize().subscriptions.first?.nextOccurrenceIndex, 0)
+    }
+
+    func testSyncV1RemainsReadableAndInvalidReplacementMetadataIsRejected() throws {
+        var legacy = DriveSyncDocument()
+        try legacy.capture(["row": Data("v1".utf8)], baseline: nil)
+        XCTAssertEqual(legacy.formatVersion, 1)
+        let decoded = try JSONDecoder().decode(DriveSyncDocument.self, from: JSONEncoder().encode(legacy))
+        XCTAssertNil(decoded.replacement)
+        var updated = DriveSyncDocument()
+        try updated.merge(decoded)
+        XCTAssertEqual(updated.records, legacy.records)
+        legacy.replacement = .init(revision: 9, writer: UUID())
+        XCTAssertThrowsError(try updated.merge(legacy))
+    }
 }

@@ -108,11 +108,7 @@ struct TransactionsView: View {
             if !visiblePayments.isEmpty {
                 Section("Pagamentos de faturas") {
                     ForEach(visiblePayments) { payment in
-                        VStack(alignment: .leading, spacing: 4) {
-                            MoneyRow(title: payment.card?.name ?? "Cartão", cents: payment.amountCents, symbol: "checkmark.circle")
-                            Text("Pago em \(payment.date.formatted(date: .abbreviated, time: .omitted)) • Fatura \(FinanceDate.monthTitle(payment.invoiceDueDate))")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
+                        InvoicePaymentRow(payment: payment)
                     }
                 }
             }

@@ -15,21 +15,19 @@ struct CreditCardsView: View {
             if UIDevice.current.userInterfaceIdiom == .pad,
                geometry.size.width >= 950, geometry.size.width > geometry.size.height,
                !typeSize.isAccessibilitySize {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 24) {
-                        ForEach(cards) { card in
-                            cardButton(card)
-                                .padding(20)
-                                .background(Color(uiColor: .secondarySystemGroupedBackground),
-                                            in: RoundedRectangle(cornerRadius: TrackrTheme.cornerRadius))
-                                .contextMenu { Button("Excluir cartão", systemImage: "trash", role: .destructive) { deleting = card } }
-
+                List {
+                    if cards.isEmpty { emptyState.listRowBackground(Color.clear) }
+                    ForEach(Array(stride(from: 0, to: cards.count, by: 2)), id: \.self) { index in
+                        HStack(alignment: .top, spacing: 24) {
+                            gridCard(cards[index])
+                            if index + 1 < cards.count { gridCard(cards[index + 1]) }
+                            else { Color.clear.frame(maxWidth: .infinity) }
                         }
+                        .listRowInsets(EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 24))
+                        .listRowBackground(Color.clear).listRowSeparator(.hidden)
                     }
-                    .padding(24).frame(maxWidth: 1400)
-                    .frame(maxWidth: .infinity)
-                    if cards.isEmpty { emptyState }
                 }
+                .listStyle(.plain).frame(maxWidth: 1400).frame(maxWidth: .infinity)
                 .navigationBarTitleDisplayMode(.inline)
             } else {
                 List {
@@ -69,6 +67,12 @@ struct CreditCardsView: View {
         } message: { Text(CreditCardViewModel.deletionExplanation) }
         .financeError($error)
     }
+    private func gridCard(_ card: CreditCard) -> some View {
+        cardButton(card).padding(20).frame(maxWidth: .infinity)
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: TrackrTheme.cornerRadius))
+            .contextMenu { Button("Excluir cartão", systemImage: "trash", role: .destructive) { deleting = card } }
+    }
+
     private var emptyState: some View {
         ContentUnavailableView("Seus cartões", systemImage: "creditcard",
                                description: Text("Cadastre um cartão para acompanhar limites, parcelas e faturas."))

@@ -12,6 +12,9 @@ struct GoogleDriveBackupView: View {
     @State private var confirmingRestore = false
     @State private var confirmingDisconnect = false
     @State private var restoreMessage: String?
+    private var restoreTitle: String {
+        pending.map { "Restaurar backup de " + $0.createdAt.formatted(date: .abbreviated, time: .shortened) + "?" } ?? "Restaurar backup?"
+    }
     var body: some View {
         List {
             if !GoogleDriveBackupService.isConfigured {
@@ -66,7 +69,7 @@ struct GoogleDriveBackupView: View {
                             }
                         }
                     }
-                } header: { Text("Restaurar") } footer: { Text("Adiciona registros ausentes. Dados atuais são mantidos. O backup contém seus registros financeiros em JSON.") }
+                } header: { Text("Restaurar") } footer: { Text("Adicione registros ausentes ou substitua os dados pela versão escolhida.") }
             }
             if let message = restoreMessage ?? service.message {
                 Section { Label(message, systemImage: "checkmark.circle").foregroundStyle(.green) }
@@ -76,7 +79,7 @@ struct GoogleDriveBackupView: View {
         .disabled(service.isBusy)
         .overlay { if service.isBusy { ProgressView("Aguarde…").padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
         .task { await service.foreground() }
-        .confirmationDialog("Restaurar este backup?", isPresented: $confirmingRestore, titleVisibility: .visible) {
+        .confirmationDialog(restoreTitle, isPresented: $confirmingRestore, titleVisibility: .visible) {
             Button("Adicionar registros") {
                 guard let pending else { return }
                 do {
@@ -85,8 +88,14 @@ struct GoogleDriveBackupView: View {
                 } catch { service.error = error.localizedDescription }
                 self.pending = nil
             }
+            Button("Substituir todos os dados por esta versão", role: .destructive) {
+                guard let pending else { return }
+                restoreMessage = nil
+                Task { await service.restoreReplacing(pending, context: context) }
+                self.pending = nil
+            }
             Button("Cancelar", role: .cancel) { pending = nil }
-        } message: { Text("\(pending?.count ?? 0) registros no arquivo. Seus dados atuais serão mantidos.") }
+        } message: { Text("\(pending?.count ?? 0) registros no arquivo. Substituir também altera os outros aparelhos ao sincronizar. Uma cópia do estado atual será salva antes.") }
         .confirmationDialog("Desconectar Google Drive?", isPresented: $confirmingDisconnect, titleVisibility: .visible) {
             Button("Desconectar", role: .destructive) { pending = nil; service.disconnect() }
         } message: { Text("Interrompe a sincronização e os backups. Dados locais e arquivos no Drive são mantidos.") }
