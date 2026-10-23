@@ -10,6 +10,7 @@ struct CreditCardDetailView: View {
     @State private var selectedDue: Date?
     @State private var showEdit = false
     @State private var showPurchase = false
+    @State private var showCommittedLimit = false
     @State private var confirmPayment = false
     @State private var error: String?
 
@@ -55,7 +56,7 @@ struct CreditCardDetailView: View {
                         get: { selected?.dueDate ?? Date.distantPast }, set: { selectedDue = $0 }
                     )) {
                         ForEach(invoices) { invoice in
-                            Text("\(FinanceDate.monthTitle(invoice.dueDate)) • \(invoice.status())").tag(invoice.dueDate)
+                            Text("\(FinanceDate.monthTitle(invoice.dueDate))").tag(invoice.dueDate)
                         }
                     }
                     if let invoice = selected {
@@ -73,7 +74,7 @@ struct CreditCardDetailView: View {
                         }
                     }
                 }
-            } header: { Text("Faturas abertas, fechadas e futuras") } footer: {
+            } header: { Text("Faturas") } footer: {
                 Text("Registrar pagamento representa uma saída da conta e libera o limite. O app não movimenta dinheiro no banco.")
             }
             CardPurchasesSection(card: card, invoice: selected)
@@ -85,7 +86,15 @@ struct CreditCardDetailView: View {
             }
             if !card.transactions.isEmpty {
                 Section {
-                    DisclosureGroup("Limite comprometido por mês") {
+                    Button { showCommittedLimit.toggle() } label: {
+                        HStack {
+                            Text("Limite comprometido por mês").foregroundStyle(Color.primary)
+                            Spacer()
+                            Image(systemName: showCommittedLimit ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        }.contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                    if showCommittedLimit {
                         ForEach(forecasts) { item in
                             let committed = card.transactions.filter { ($0.invoiceDueDate ?? .distantPast) >= item.month }.reduce(Int64(0)) { $0 + $1.amountCents }
                             let paid = card.payments.filter { $0.invoiceDueDate >= item.month }.reduce(Int64(0)) { $0 + $1.amountCents }

@@ -13,6 +13,7 @@ struct DashboardView: View {
     @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     @AppStorage("ledger.monthlyBudgetCents") private var budget = 0.0
     @AppStorage("ledger.reserveGoalCents") private var reserveGoal = 0.0
+    @AppStorage("ledger.dismissedPayments") private var dismissedPayments = ""
     @State private var viewModel = DashboardViewModel()
     @State private var entry: DashboardEntry?
     @State private var showSettings = false
@@ -26,7 +27,8 @@ struct DashboardView: View {
 
     var body: some View {
         let snapshot = viewModel.snapshot(transactions: transactions, cards: cards, subscriptions: subscriptions,
-                                          payments: payments, month: .now, scheduled: scheduled)
+                                          payments: payments, month: .now, scheduled: scheduled,
+                                          dismissedIDs: Set(dismissedPayments.split(separator: "\n").map(String.init)))
         List {
             Section {
                 VStack(alignment: .leading, spacing: 8) {

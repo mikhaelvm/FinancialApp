@@ -51,8 +51,7 @@ struct PaymentPlanner {
         for card in cards {
             for invoice in InvoiceEngine().invoices(for: card, subscriptions: subscriptions, through: horizon, today: today)
                 where invoice.dueDate <= horizon && invoice.remainingCents > 0 {
-                let key = FinanceDate.month(invoice.dueDate).timeIntervalSince1970
-                result.append(PaymentCommitment(id: "invoice:\(card.id):\(key)", title: "Fatura \(card.name)",
+                result.append(PaymentCommitment(id: PaymentDismissalStore.invoiceID(cardID: card.id, dueDate: invoice.dueDate), title: "Fatura \(card.name)",
                                                  amountCents: invoice.remainingCents, dueDate: invoice.dueDate,
                                                  kind: .invoice, sourceID: card.id,
                                                  detail: invoice.status(on: today),

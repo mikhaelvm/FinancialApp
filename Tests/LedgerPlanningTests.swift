@@ -57,6 +57,33 @@ final class LedgerPlanningTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<InvoicePayment>()), 0)
     }
 
+    func testDashboardExcludesDismissalsFromCommitmentsAndForecastWithoutChangingCashOrLimit() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let card = CreditCard(name: "Cartão", limitCents: 100000, closingDay: 5, dueDay: 12)
+        context.insert(card)
+        try CreditCardViewModel().purchase(context: context, title: "Compra", amountCents: 12000,
+                                          date: date(1), installments: 2, card: card, category: nil)
+        let bill = ScheduledPayment(title: "Conta", amountCents: 5000, dueDate: date(20))
+        context.insert(bill); try context.save()
+        let model = DashboardViewModel()
+        let transactions = try context.fetch(FetchDescriptor<Transaction>())
+        let before = model.snapshot(transactions: transactions, cards: [card], subscriptions: [], payments: [],
+                                    month: date(22), today: date(22), scheduled: [bill], dismissedIDs: [])
+        let dismissed: Set<String> = [PaymentDismissalStore.invoiceID(cardID: card.id, dueDate: date(12)), "scheduled:\(bill.id)"]
+        let after = model.snapshot(transactions: transactions, cards: [card], subscriptions: [], payments: [],
+                                   month: date(22), today: date(22), scheduled: [bill], dismissedIDs: dismissed)
+        XCTAssertEqual(before.pendingInvoices, 6000)
+        XCTAssertEqual(before.scheduledCents, 5000)
+        XCTAssertEqual(after.pendingInvoices, 0)
+        XCTAssertEqual(after.scheduledCents, 0)
+        XCTAssertEqual(after.forecasts[0].invoiceCents, 0)
+        XCTAssertEqual(after.forecasts[1].invoiceCents, 6000)
+        XCTAssertEqual(after.balance, before.balance)
+        XCTAssertEqual(card.usedLimitCents, 12000)
+        XCTAssertEqual(after.categories.reduce(0) { $0 + $1.cents }, before.categories.reduce(0) { $0 + $1.cents })
+    }
+
     func testReminderIncludesAdvanceAndDueDayAtChosenHour() {
         let preferences = ReminderPreferences(enabled: true, daysBefore: 3, hour: 10, minute: 30)
         let reminders = ReminderPlanner().reminders(for: [item(due: date(25))], preferences: preferences, now: date(21))

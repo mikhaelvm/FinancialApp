@@ -32,7 +32,8 @@ struct DashboardSnapshot {
 final class DashboardViewModel {
     func snapshot(transactions: [Transaction], cards: [CreditCard],
                   subscriptions: [Subscription], payments: [InvoicePayment],
-                  month: Date, today: Date = .now, scheduled: [ScheduledPayment] = []) -> DashboardSnapshot {
+                  month: Date, today: Date = .now, scheduled: [ScheduledPayment] = [],
+                  dismissedIDs: Set<String> = PaymentDismissalStore.ids()) -> DashboardSnapshot {
         let endOfToday = FinanceDate.calendar.date(byAdding: .day, value: 1, to: FinanceDate.day(today))!
         let cash = transactions.filter { $0.card == nil && $0.date < endOfToday }
         let realizedPayments = payments.filter { $0.date < endOfToday }
@@ -44,9 +45,13 @@ final class DashboardViewModel {
         let paid = realizedPayments.filter { FinanceDate.sameMonth($0.date, month) }.reduce(Int64(0)) { $0 + $1.amountCents }
         let horizon = FinanceDate.date(day: 31, inMonth: FinanceDate.monthOffset(11, from: month))
         let invoices = cards.flatMap { InvoiceEngine().invoices(for: $0, subscriptions: subscriptions, through: horizon, today: today) }
+        let activeInvoices = cards.flatMap { card in
+            InvoiceEngine().invoices(for: card, subscriptions: subscriptions, through: horizon, today: today)
+                .filter { !dismissedIDs.contains(PaymentDismissalStore.invoiceID(cardID: card.id, dueDate: $0.dueDate)) }
+        }
         // Include overdue invoices in the amount needed to get through this month.
         let nextMonth = FinanceDate.monthOffset(1, from: month)
-        let pending = invoices.filter { $0.dueDate < nextMonth }.reduce(Int64(0)) { $0 + $1.remainingCents }
+        let pending = activeInvoices.filter { $0.dueDate < nextMonth }.reduce(Int64(0)) { $0 + $1.remainingCents }
         let monthEnd = FinanceDate.calendar.date(byAdding: .day, value: -1, to: nextMonth)!
         let upcomingCash = subscriptions.filter { $0.isActive && $0.card == nil }.reduce(Int64(0)) { sum, subscription in
             sum + RecurrenceEngine().occurrences(of: subscription, through: monthEnd)
@@ -68,11 +73,11 @@ final class DashboardViewModel {
         }
         let forecasts = (0..<12).map { offset in
             let date = FinanceDate.monthOffset(offset, from: month)
-            return MonthForecast(month: date, invoiceCents: invoices.filter {
+            return MonthForecast(month: date, invoiceCents: activeInvoices.filter {
                 FinanceDate.sameMonth($0.dueDate, date)
             }.reduce(Int64(0)) { $0 + $1.remainingCents })
         }
-        let scheduledCents = scheduled.filter { !$0.isPaid && $0.dueDate < nextMonth }
+        let scheduledCents = scheduled.filter { !$0.isPaid && $0.dueDate < nextMonth && !dismissedIDs.contains("scheduled:\($0.id)") }
             .reduce(Int64(0)) { $0 + $1.amountCents }
         return DashboardSnapshot(balance: balance, income: income, cashExpenses: expenses,
                                  payments: paid, pendingInvoices: pending, upcomingCash: upcomingCash, scheduledCents: scheduledCents,

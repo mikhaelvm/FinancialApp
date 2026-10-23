@@ -2,6 +2,9 @@ import Foundation
 
 /// A dismissal is an agenda preference, never a financial transaction.
 enum PaymentDismissalStore {
+    static func invoiceID(cardID: UUID, dueDate: Date) -> String {
+        "invoice:\(cardID):\(FinanceDate.month(dueDate).timeIntervalSince1970)"
+    }
     static let key = "ledger.dismissedPayments"
     static func ids(defaults: UserDefaults = .standard) -> Set<String> {
         Set((defaults.string(forKey: key) ?? "").split(separator: "\n").map(String.init))
