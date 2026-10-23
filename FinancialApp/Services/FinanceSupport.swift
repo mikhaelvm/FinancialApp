@@ -67,6 +67,13 @@ enum FinanceDate {
         let lastDay = calendar.range(of: .day, in: .month, for: start)!.count
         return calendar.date(byAdding: .day, value: min(max(day, 1), lastDay) - 1, to: start)!
     }
+    /// Weekend-only business calendar; public holidays are not included.
+    static func nextWeekday(_ date: Date) -> Date {
+        let start = day(date)
+        let weekday = calendar.component(.weekday, from: start)
+        let offset = weekday == 7 ? 2 : (weekday == 1 ? 1 : 0)
+        return calendar.date(byAdding: .day, value: offset, to: start)!
+    }
     static func sameMonth(_ a: Date, _ b: Date) -> Bool { month(a) == month(b) }
     static func monthTitle(_ date: Date) -> String {
         capitalizedMonth(date.formatted(.dateTime.month(.wide).year().locale(Locale(identifier: "pt_BR"))))

@@ -115,7 +115,7 @@ final class PersistenceAndCashFlowTests: XCTestCase {
         try context.save()
         let invoices = InvoiceEngine().invoices(for: card, subscriptions: [subscription],
                                                 through: date(2025, 4, 30), today: date(2025, 2, 1))
-        XCTAssertEqual(invoices.first?.dueDate, date(2025, 4, 5))
+        XCTAssertEqual(invoices.first?.dueDate, date(2025, 4, 7))
         XCTAssertEqual(invoices.first?.totalCents, 3000)
         XCTAssertEqual(invoices.first?.payableCents, 0)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 0)

@@ -40,7 +40,16 @@ private struct CategoryForm: View {
     @State private var symbol = "tag.fill"
     @State private var color = "teal"
     @State private var error: String?
-    private let symbols = ["tag.fill", "cart.fill", "fork.knife", "house.fill", "car.fill", "heart.fill", "book.fill", "airplane", "gift.fill", "pawprint.fill", "sportscourt.fill", "briefcase.fill", "banknote.fill", "play.tv.fill"]
+    private let symbols = ["tag.fill", "cart.fill", "fork.knife", "house.fill", "car.fill", "heart.fill", "book.fill", "airplane", "gift.fill", "pawprint.fill", "sportscourt.fill", "briefcase.fill", "banknote.fill", "play.tv.fill",
+        "bag.fill", "basket.fill", "creditcard.fill", "building.columns.fill", "dollarsign.circle.fill",
+        "chart.line.uptrend.xyaxis", "wallet.pass.fill", "receipt", "percent", "calendar", "repeat",
+        "cup.and.saucer.fill", "wineglass.fill", "birthday.cake.fill", "carrot.fill", "takeoutbag.and.cup.and.straw.fill",
+        "building.2.fill", "bed.double.fill", "sofa.fill", "lamp.desk.fill", "lightbulb.fill", "bolt.fill", "drop.fill", "flame.fill", "wrench.and.screwdriver.fill",
+        "bus.fill", "tram.fill", "bicycle", "fuelpump.fill", "parkingsign.circle.fill", "ferry.fill", "suitcase.rolling.fill",
+        "cross.case.fill", "pills.fill", "stethoscope", "cross.fill", "figure.walk", "dumbbell.fill",
+        "graduationcap.fill", "pencil", "backpack.fill", "desktopcomputer", "laptopcomputer", "iphone", "wifi", "phone.fill", "cloud.fill",
+        "music.note", "headphones", "gamecontroller.fill", "film.fill", "camera.fill", "paintpalette.fill", "ticket.fill", "party.popper.fill",
+        "tshirt.fill", "scissors", "sparkles", "leaf.fill", "tree.fill", "dog.fill", "cat.fill", "person.2.fill", "figure.and.child.holdinghands", "star.fill", "square.grid.2x2.fill"]
     private let colors = ["teal", "blue", "green", "orange", "purple", "pink", "red"]
     private let colorNames = ["teal": "Verde-petróleo", "blue": "Azul", "green": "Verde", "orange": "Laranja", "purple": "Roxo", "pink": "Rosa", "red": "Vermelho"]
     private var isDefault: Bool {

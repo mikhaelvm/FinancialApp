@@ -32,12 +32,16 @@ struct InvoiceEngine {
     func dates(for purchaseDate: Date, closingDay: Int, dueDay: Int,
                installmentOffset: Int = 0) -> (closing: Date, due: Date) {
         let purchase = FinanceDate.day(purchaseDate)
-        let currentClosing = FinanceDate.date(day: closingDay, inMonth: purchase)
-        let firstOffset = purchase >= currentClosing ? 1 : 0
-        let closingMonth = FinanceDate.monthOffset(firstOffset + installmentOffset, from: purchase)
-        let closing = FinanceDate.date(day: closingDay, inMonth: closingMonth)
+        // A closing shifted into the next month still belongs to its original cycle.
+        var baseMonth = FinanceDate.monthOffset(-1, from: purchase)
+        while purchase >= FinanceDate.nextWeekday(FinanceDate.date(day: closingDay, inMonth: baseMonth)) {
+            baseMonth = FinanceDate.monthOffset(1, from: baseMonth)
+        }
+        let closingMonth = FinanceDate.monthOffset(installmentOffset, from: baseMonth)
+        let closing = FinanceDate.nextWeekday(FinanceDate.date(day: closingDay, inMonth: closingMonth))
         let dueMonth = FinanceDate.monthOffset(dueDay > closingDay ? 0 : 1, from: closingMonth)
-        return (closing, FinanceDate.date(day: dueDay, inMonth: dueMonth))
+        let due = FinanceDate.nextWeekday(FinanceDate.date(day: dueDay, inMonth: dueMonth))
+        return (closing, max(closing, due))
     }
 
     func installmentAmounts(totalCents: Int64, count: Int) throws -> [Int64] {

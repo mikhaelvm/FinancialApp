@@ -4,6 +4,7 @@ import SwiftData
 struct CreditCardsView: View {
     @AppStorage("ledger.hideAmounts") private var hideAmounts = false
     @Environment(\.modelContext) private var context
+    @Environment(LedgerRouter.self) private var router
     @Query(sort: \CreditCard.name) private var cards: [CreditCard]
     @State private var showAdd = false
     @State private var deleting: CreditCard?
@@ -15,16 +16,22 @@ struct CreditCardsView: View {
                                        description: Text("Cadastre um cartão para acompanhar limites, parcelas e faturas."))
             }
             ForEach(cards) { card in
-                NavigationLink { CreditCardDetailView(card: card) } label: {
+                Section {
+                Button { router.cardPath.append(card.id) } label: {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Label(card.name, systemImage: "creditcard.fill").font(.headline)
                             Spacer()
                             Image(systemName: "wave.3.right").accessibilityHidden(true)
                         }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Limite disponível").font(.caption).foregroundStyle(.secondary)
-                            Text(hideAmounts ? "••••" : Money.format(card.availableLimitCents)).font(.title2.bold()).monospacedDigit()
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Limite disponível").font(.caption).foregroundStyle(.secondary)
+                                Text(hideAmounts ? "••••" : Money.format(card.availableLimitCents)).font(.title2.bold()).monospacedDigit()
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.tertiary).accessibilityHidden(true)
                         }
                         ProgressView(value: min(Double(card.usedLimitCents), Double(card.limitCents)),
                                      total: Double(max(1, card.limitCents)))
@@ -38,17 +45,21 @@ struct CreditCardsView: View {
                             Text("Fecha \(card.closingDay) • Vence \(card.dueDay)")
                         }.font(.caption).foregroundStyle(.secondary)
                     }
-                    .foregroundStyle(Color.primary).padding(20)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: LedgerTheme.cornerRadius))
+                    .foregroundStyle(Color.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 4))
+                .buttonStyle(.plain)
+                .accessibilityHint("Abrir compras e faturas do cartão")
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20))
                 .swipeActions(allowsFullSwipe: false) {
                     Button("Excluir", role: .destructive) { deleting = card }.tint(.red)
+                }
                 }
             }
         }
         .ledgerListScreen("Cartões")
+        .listSectionSpacing(16)
         .navigationDestination(for: UUID.self) { id in
             if let card = cards.first(where: { $0.id == id }) {
                 CreditCardDetailView(card: card)
@@ -105,7 +116,7 @@ struct CardFormView: View {
                     }
                 }
                 Section {
-                    Text("Em meses curtos, usamos o último dia disponível. Se o vencimento for anterior ou igual ao fechamento, ele ocorre no mês seguinte.")
+                    Text("Em meses curtos, usamos o último dia disponível. Fechamentos e vencimentos no fim de semana passam para segunda-feira, sem considerar feriados. Compras no dia do fechamento ajustado entram no próximo ciclo. Faturas já lançadas mantêm suas datas.")
                     if card != nil {
                         Text("Alterações de dias valem para novas compras e projeções de assinaturas. Parcelas já lançadas mantêm as datas originais.")
                     }

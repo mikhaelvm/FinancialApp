@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct StatementImportView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Category.name) private var categories: [Category]
     let fileURL: URL
     @State private var choosingFile = false
@@ -51,10 +52,12 @@ struct StatementImportView: View {
                     MoneyRow(title: "Receitas selecionadas", cents: income, symbol: "plus.circle", tint: .green)
                     MoneyRow(title: "Despesas selecionadas", cents: expenses, symbol: "minus.circle")
                     LabeledContent("Selecionados", value: "\(selected.count) de \(rows.count)")
-                    Button("Selecionar novos lançamentos") {
-                        for index in rows.indices { rows[index].selected = !rows[index].isDuplicate && !rows[index].requiresReview && rows[index].date <= FinanceDate.day(.now) }
+                    Button("Marcar todos") {
+                        for index in rows.indices { rows[index].selected = (!rows[index].isDuplicate || rows[index].importAsNew) && rows[index].date <= FinanceDate.day(.now) && rows[index].signedCents != 0 && !rows[index].title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
                     }
                     Button("Desmarcar todos") { for index in rows.indices { rows[index].selected = false } }
+                    Text("Marcar todos inclui os movimentos válidos. Duplicados permanecem desmarcados, salvo quando identificados como outro movimento. Confira os dados do PDF antes de importar.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section {
                     ForEach($rows) { $row in
@@ -63,7 +66,6 @@ struct StatementImportView: View {
                 } header: { Text("Lançamentos encontrados") } footer: {
                     Text("Revise descrições, valores, categorias e duplicados. Uma nova importação do mesmo extrato não repete registros com a mesma identificação. Movimentos manuais e pagamentos de faturas já registrados também podem aparecer como possíveis duplicados.")
                 }
-                Section { Button("Importar \(selected.count) lançamentos") { confirming = true }.disabled(selected.isEmpty) }
             }
             if !warnings.isEmpty {
                 Section("Linhas que precisam de atenção") {
@@ -74,6 +76,15 @@ struct StatementImportView: View {
             if let message { Section { Label(message, systemImage: "checkmark.circle").foregroundStyle(.green) } }
         }
         .ledgerListScreen("Importar extrato", largeTitle: false)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                LedgerToolbarButton("Cancelar importação", systemImage: "xmark") { dismiss() }.disabled(isLoading)
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                LedgerToolbarButton("Importar \(selected.count) lançamentos", systemImage: "checkmark") { confirming = true }
+                    .disabled(isLoading || selected.isEmpty)
+            }
+        }
         .disabled(isLoading)
         .overlay {
             if isLoading { ProgressView("Analisando extrato…").padding(24).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) }
@@ -91,6 +102,7 @@ struct StatementImportView: View {
                     let count = try StatementImportService.commit(rows, context: context)
                     rows = try StatementImportService.prepare(parsedRows, context: context)
                     message = "\(count) lançamentos importados. Eles já aparecem no Extrato."
+                    dismiss()
                 } catch { self.error = error.localizedDescription }
             }
         } message: { Text("Receitas: \(Money.format(income)). Despesas: \(Money.format(expenses)). O saldo consolidado será atualizado.") }
@@ -189,7 +201,6 @@ struct StatementFilePicker: ViewModifier {
             }) { file in
                 NavigationStack {
                     StatementImportView(fileURL: file.url)
-                        .toolbar { ToolbarItem(placement: .confirmationAction) { LedgerToolbarButton("Concluir", systemImage: "checkmark") { selected = nil } } }
                 }
             }
             .financeError($error)

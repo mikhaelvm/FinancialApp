@@ -29,12 +29,6 @@ struct SubscriptionsView: View {
                                     subtitle: "\(subscriptions.filter(\.isActive).count) recorrências ativas • média mensal", symbol: "repeat")
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             }
-            Section {
-                Picker("Situação", selection: $showActive) {
-                    Text("Ativas").tag(true)
-                    Text("Pausadas").tag(false)
-                }.pickerStyle(.segmented)
-            }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
             if subscriptions.isEmpty {
                 ContentUnavailableView("Suas assinaturas", systemImage: "repeat.circle",
                                        description: Text("Acompanhe serviços e despesas recorrentes em um só lugar."))
@@ -55,6 +49,13 @@ struct SubscriptionsView: View {
                 }
             }
             Section {
+                Picker("Situação", selection: $showActive) {
+                    Text("Ativas").tag(true)
+                    Text("Pausadas").tag(false)
+                }.pickerStyle(.segmented)
+                if !subscriptions.isEmpty && !subscriptions.contains(where: { $0.isActive == showActive }) {
+                    Text(showActive ? "Nenhuma recorrência ativa." : "Nenhuma recorrência pausada.").foregroundStyle(.secondary)
+                }
                 ForEach(subscriptions.filter { $0.isActive == showActive }) { subscription in
                     VStack(alignment: .leading, spacing: 8) {
                         Button { editing = subscription } label: {
@@ -62,7 +63,7 @@ struct SubscriptionsView: View {
                                 SymbolTile(symbol: subscription.category?.symbol ?? "repeat", tint: subscription.category?.color ?? LedgerTheme.accent)
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(subscription.title).font(.headline)
-                                    CategoryLabel(category: subscription.category).font(.caption)
+                                    Text(subscription.category?.name ?? "Sem categoria").font(.caption).foregroundStyle(.secondary)
                                     Text(subscription.card?.name ?? "Débito / conta")
                                         .font(.caption).foregroundStyle(.secondary)
                                     if subscription.isActive {

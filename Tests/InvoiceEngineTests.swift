@@ -9,12 +9,12 @@ final class InvoiceEngineTests: XCTestCase {
 
     func testPurchaseBeforeClosingHasNextMonthDueDate() {
         let result = engine.dates(for: date(2026, 1, 24), closingDay: 25, dueDay: 5)
-        XCTAssertEqual(result.closing, date(2026, 1, 25))
+        XCTAssertEqual(result.closing, date(2026, 1, 26))
         XCTAssertEqual(result.due, date(2026, 2, 5))
     }
 
     func testPurchaseOnClosingDayMovesToFollowingCycle() {
-        for day in [25, 26] {
+        for day in [26, 27] {
             let result = engine.dates(for: date(2026, 1, day), closingDay: 25, dueDay: 5)
             XCTAssertEqual(result.closing, date(2026, 2, 25))
             XCTAssertEqual(result.due, date(2026, 3, 5))
@@ -31,9 +31,25 @@ final class InvoiceEngineTests: XCTestCase {
 
     func testShortMonthsClampAndRecoverOriginalDay() {
         let purchase = date(2026, 1, 1)
-        XCTAssertEqual(engine.dates(for: purchase, closingDay: 31, dueDay: 5, installmentOffset: 1).closing, date(2026, 2, 28))
+        XCTAssertEqual(engine.dates(for: purchase, closingDay: 31, dueDay: 5, installmentOffset: 1).closing, date(2026, 3, 2))
         XCTAssertEqual(engine.dates(for: purchase, closingDay: 31, dueDay: 5, installmentOffset: 2).closing, date(2026, 3, 31))
         XCTAssertEqual(engine.dates(for: date(2028, 2, 1), closingDay: 31, dueDay: 5).closing, date(2028, 2, 29))
+    }
+
+    func testWeekendClosingUsesMondayAsThePurchaseBoundary() {
+        let sunday = engine.dates(for: date(2026, 1, 25), closingDay: 25, dueDay: 5)
+        XCTAssertEqual(sunday.closing, date(2026, 1, 26))
+        XCTAssertEqual(sunday.due, date(2026, 2, 5))
+        let monday = engine.dates(for: date(2026, 1, 26), closingDay: 25, dueDay: 5)
+        XCTAssertEqual(monday.closing, date(2026, 2, 25))
+    }
+
+    func testWeekendDueDateAndClosingCrossingMonthBoundary() {
+        XCTAssertEqual(engine.dates(for: date(2026, 1, 1), closingDay: 10, dueDay: 25).due, date(2026, 1, 26))
+        let result = engine.dates(for: date(2026, 3, 1), closingDay: 31, dueDay: 5)
+        XCTAssertEqual(result.closing, date(2026, 3, 2))
+        XCTAssertEqual(result.due, date(2026, 3, 5))
+        XCTAssertEqual(FinanceDate.nextWeekday(date(2026, 2, 28)), date(2026, 3, 2))
     }
 
     func testTwelveHundredInTenInstallments() throws {
