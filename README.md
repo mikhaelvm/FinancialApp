@@ -244,7 +244,7 @@ Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **88 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também dezesseis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **88 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também dezoito testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 
@@ -257,3 +257,5 @@ Recorrências: a edição permite suspender apenas a próxima renovação ou pau
 O envio do IPA usa `actions/upload-artifact@v7` com `archive: false`: baixe `Trackr.ipa` diretamente nos artefatos, sem ZIP externo. O IPA continua exigindo assinatura para instalação. Artefatos de builds anteriores mantêm o formato antigo.
 
 O CI resolve pacotes antes de compilar e limita o build a dois jobs. Se o serviço de build do Xcode travar, os testes têm uma única nova tentativa com DerivedData separado. Erros de compilação e falhas de testes não são repetidos. Os logs e xcresult de ambas as tentativas ficam no artefato iOS-TestResults.
+
+Para o travamento repetido no SwiftDriver do Xcode 26, o projeto e os comandos de teste/archive desativam módulos explícitos (`SWIFT_ENABLE_EXPLICIT_MODULES=NO`), conforme alternativa documentada pela Apple. Relatórios recentes de crash do serviço de build também são coletados em iOS-TestResults. Essa configuração precisa ser validada no próximo runner macOS.

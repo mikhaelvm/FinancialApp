@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from run_xcodebuild import run, retry_command, SERVICE_CRASH
+from run_xcodebuild import run, retry_command, SERVICE_CRASH, collect_crash_reports
 
 
 class Process:
@@ -64,6 +64,20 @@ class XcodeRetryTests(unittest.TestCase):
         code, calls, _ = self.execute([Process(SERVICE_CRASH, 65), Process(SERVICE_CRASH, 65)])
         self.assertEqual(code, 65)
         self.assertEqual(len(calls), 2)
+
+    def test_diagnostics_collects_only_recent_build_service_reports(self):
+        root = Path(__file__).resolve().parents[2]
+        temporary_root = (root / "build/ci-test-tmp").resolve()
+        assert temporary_root.is_relative_to(root)
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as folder, contextlib.redirect_stdout(io.StringIO()):
+            source = Path(folder) / "source"
+            source.mkdir()
+            (source / "XCBBuildService-2026.ips").write_text("build crash")
+            (source / "UnrelatedApp.ips").write_text("unrelated")
+            destination = Path(folder) / "collected"
+            collect_crash_reports(destination, roots=[source])
+            self.assertEqual([p.name for p in destination.iterdir()], ["XCBBuildService-2026.ips"])
 
     def test_missing_isolated_paths_are_rejected(self):
         with self.assertRaises(ValueError):

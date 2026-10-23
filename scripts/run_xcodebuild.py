@@ -7,9 +7,29 @@ import argparse
 from pathlib import Path
 import subprocess
 import sys
+import shutil
+import time
 
 
 SERVICE_CRASH = "unexpected service error: The Xcode build system has crashed"
+
+
+def collect_crash_reports(destination: Path, roots=None) -> None:
+    roots = roots if roots is not None else [Path.home() / "Library/Logs/DiagnosticReports",
+                                             Path("/Library/Logs/DiagnosticReports")]
+    prefixes = ("XCBBuildService", "SWBBuildService", "SwiftBuildService", "swift-driver")
+    destination.mkdir(parents=True, exist_ok=True)
+    copied = 0
+    for root in roots:
+        try:
+            for report in root.iterdir():
+                if (report.name.startswith(prefixes) and report.suffix in {".ips", ".crash"}
+                        and report.stat().st_mtime >= time.time() - 7200):
+                    shutil.copy2(report, destination / report.name)
+                    copied += 1
+        except OSError:
+            continue  # Diagnostics are best-effort and must not replace the build exit code.
+    print(f"Collected {copied} recent Xcode build-service crash reports.", flush=True)
 
 
 def retry_command(command: list[str]) -> list[str]:
@@ -41,6 +61,8 @@ def run(command: list[str], log_prefix: Path) -> int:
             code = process.wait()
         if code == 0:
             return 0
+        if crashed:
+            collect_crash_reports(log_prefix.parent / "crash-reports")
         if not crashed or attempt == 2:
             return code
         print("Xcode service crashed. Retrying once with isolated DerivedData.", flush=True)

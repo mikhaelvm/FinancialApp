@@ -87,6 +87,7 @@ jobs:
             -clonedSourcePackagesDirPath "$PWD/build/SourcePackages" \
             -parallel-testing-enabled NO \
             -resultBundlePath build/TestResults.xcresult \
+            SWIFT_ENABLE_EXPLICIT_MODULES=NO \
             CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="-"
 
       - name: Archive unsigned device application
@@ -101,6 +102,7 @@ jobs:
             -derivedDataPath "$PWD/build/DerivedData" \
             -clonedSourcePackagesDirPath "$PWD/build/SourcePackages" \
             -jobs 2 \
+            SWIFT_ENABLE_EXPLICIT_MODULES=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
@@ -133,6 +135,6 @@ jobs:
           name: iOS-TestResults
           path: |
             build/TestResults*.xcresult
-            build/ci-logs/*.log
+            build/ci-logs/
           if-no-files-found: ignore
           retention-days: 7

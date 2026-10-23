@@ -109,6 +109,13 @@ class BuildSpecTests(unittest.TestCase):
         self.assertTrue(any('$(TRACKR_GOOGLE_REVERSED_CLIENT_ID)' in item['CFBundleURLSchemes'] for item in info['CFBundleURLTypes']))
         self.assertNotIn('GoogleSignIn', self.source.split('  TrackrWidgets:')[1])
 
+    def test_explicit_module_workaround_covers_app_packages_and_archive(self):
+        root = Path(__file__).resolve().parents[2]
+        self.assertIn('SWIFT_ENABLE_EXPLICIT_MODULES: NO', self.source)
+        workflow = (root / '.github/workflows/build-ipa.yml').read_text()
+        self.assertEqual(workflow.count('SWIFT_ENABLE_EXPLICIT_MODULES=NO'), 2)
+        self.assertIn('build/ci-logs/', workflow)
+
     def test_app_identity_and_face_id_permission_are_present(self):
         import plistlib
         root = Path(__file__).resolve().parents[2]
