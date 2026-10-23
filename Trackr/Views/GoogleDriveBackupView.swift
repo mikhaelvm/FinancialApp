@@ -6,6 +6,8 @@ struct GoogleDriveBackupView: View {
     @State private var service = GoogleDriveBackupService.shared
     @AppStorage("trackr.drive.automatic") private var automatic = false
     @AppStorage("trackr.drive.lastBackup") private var lastBackup = 0.0
+    @AppStorage("trackr.drive.syncEnabled") private var syncEnabled = true
+    @AppStorage("trackr.drive.lastSync") private var lastSync = 0.0
     @State private var pending: TrackrBackup?
     @State private var confirmingRestore = false
     @State private var confirmingDisconnect = false
@@ -28,8 +30,18 @@ struct GoogleDriveBackupView: View {
                         Label("Conectar Google Drive", systemImage: "person.crop.circle.badge.checkmark")
                     }.disabled(!GoogleDriveBackupService.isConfigured)
                 }
-            } footer: { Text("Somente a área privada do Trackr no Drive. Seus outros arquivos não são acessados.") }
+            } footer: { Text("Ao conectar, combina os registros locais com os da conta. Usa somente a área privada do Trackr no Drive.") }
             if service.isConnected {
+                Section {
+                    Toggle("Sincronizar entre aparelhos", isOn: Binding(get: { syncEnabled }, set: { service.synchronization = $0 }))
+                    Button("Sincronizar agora", systemImage: "arrow.triangle.2.circlepath") {
+                        Task { await service.synchronizeNow(context: context) }
+                    }.disabled(!syncEnabled)
+                    LabeledContent("Última sincronização", value: lastSync > 0
+                        ? Date(timeIntervalSince1970: lastSync).formatted(date: .abbreviated, time: .shortened) : "Nenhuma")
+                } header: { Text("iPhone e iPad") } footer: {
+                    Text("Conecte a mesma conta nos dois aparelhos. Inclui edições e exclusões; atualiza ao abrir o app e durante o uso. Sem internet, envia ao reconectar.")
+                }
                 Section {
                     Button("Fazer backup agora", systemImage: "icloud.and.arrow.up") {
                         Task { await service.backup(context: context) }
@@ -63,7 +75,7 @@ struct GoogleDriveBackupView: View {
         .trackrListScreen("Google Drive", largeTitle: false)
         .disabled(service.isBusy)
         .overlay { if service.isBusy { ProgressView("Aguarde…").padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)) } }
-        .task { await service.initialize() }
+        .task { await service.foreground() }
         .confirmationDialog("Restaurar este backup?", isPresented: $confirmingRestore, titleVisibility: .visible) {
             Button("Adicionar registros") {
                 guard let pending else { return }
@@ -77,7 +89,7 @@ struct GoogleDriveBackupView: View {
         } message: { Text("\(pending?.count ?? 0) registros no arquivo. Seus dados atuais serão mantidos.") }
         .confirmationDialog("Desconectar Google Drive?", isPresented: $confirmingDisconnect, titleVisibility: .visible) {
             Button("Desconectar", role: .destructive) { pending = nil; service.disconnect() }
-        } message: { Text("Interrompe os backups automáticos. Dados locais e backups no Drive são mantidos.") }
+        } message: { Text("Interrompe a sincronização e os backups. Dados locais e arquivos no Drive são mantidos.") }
         .financeError($service.error)
     }
 }

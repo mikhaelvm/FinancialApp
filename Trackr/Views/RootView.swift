@@ -40,8 +40,11 @@ struct RootView: View {
             // Also catches midnight while the app stays open; no background entitlement required.
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(60)) } catch { return }
-                if scenePhase == .active { refresh() }
+                if scenePhase == .active { refresh(); await GoogleDriveBackupService.shared.foreground() }
             }
+        }
+        .onChange(of: AppLockService.shared.isLocked) { _, locked in
+            if !locked { Task { await GoogleDriveBackupService.shared.foreground() } }
         }
         .financeError($error)
     }

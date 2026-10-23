@@ -41,7 +41,7 @@ struct TransactionsView: View {
             && (router.searchTerm.isEmpty || ($0.card?.name ?? "").localizedCaseInsensitiveContains(router.searchTerm)) }
     }
     var body: some View {
-        List {
+        TrackrAdaptiveSections(primaryFraction: 0.36) {
             Section {
                 HStack {
                     Button { selectedMonth = FinanceDate.monthOffset(-1, from: selectedMonth) } label: {
@@ -70,6 +70,7 @@ struct TransactionsView: View {
                 }
                 if hasFilters { Button("Limpar filtros") { clearFilters() } }
             } header: { Text("Filtros") }
+        } secondary: {
             Section("Lançamentos na conta") {
                 if cash.isEmpty && cardPurchases.isEmpty && visiblePayments.isEmpty {
                     ContentUnavailableView(hasFilters ? "Nenhum resultado" : "Nenhuma transação", systemImage: hasFilters ? "line.3.horizontal.decrease.circle" : "banknote",

@@ -1,14 +1,16 @@
 # Trackr — iOS
 
-Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, sem CloudKit, servidor ou assinatura de sincronização. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
+Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, com sincronização opcional pelo Google Drive, sem CloudKit ou servidor próprio. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
-## Versão 2.1.0 — Google Drive
+## Versão 2.2.0 — iPhone, iPad e sincronização
 
-- Em Dados e backup, conecte o Google Drive para enviar e restaurar backups.
-- Backup manual e automático opcional, agrupado após alterações. Só envia quando os registros mudam.
-- Área privada no Drive, com cinco versões. Desconectar ou redefinir o app mantém os backups remotos.
-- Configuração necessária: siga [docs/GOOGLE_DRIVE.md](docs/GOOGLE_DRIVE.md) para criar seu Client ID OAuth. Sem ele, o app compila com a conexão desabilitada.
-- Segundo plano depende do iOS. Com proteção de acesso, envia somente durante uma sessão desbloqueada no app.
+- Google Drive sincroniza registros, edições, exclusões e dispensas entre aparelhos na mesma conta. A primeira conexão busca os dados automaticamente, inclusive o último backup da versão anterior quando ainda não há sincronização.
+- Cada aparelho grava seu próprio documento. Revisões por registro e marcadores de exclusão combinam mudanças offline; categorias padrão e cobranças automáticas têm identidades estáveis para evitar duplicação.
+- Atualiza ao abrir/desbloquear, após alterações e aproximadamente a cada minuto com o app ativo. Inclui botão **Sincronizar agora**. Segundo plano depende do iOS; com bloqueio de acesso, só sincroniza em sessão desbloqueada.
+- Em conflitos simultâneos no mesmo registro, uma revisão vence com desempate determinístico por aparelho. Exclusões recebidas vencem edições offline do registro excluído. Preferências de aparência, privacidade, orçamento e metas continuam locais.
+- Backups manuais e automáticos opcionais continuam separados, com cinco versões. Desconectar ou redefinir localmente não apaga arquivos remotos; reconectar pode trazer esses dados novamente.
+- iPad em janela horizontal larga: Resumo em duas colunas, Extrato com filtros ao lado dos lançamentos, Pagamentos com visão geral ao lado das contas, cartões em grade e detalhes com faturas ao lado das previsões. Fontes de acessibilidade e janelas estreitas mantêm uma coluna.
+- Configuração OAuth em [docs/GOOGLE_DRIVE.md](docs/GOOGLE_DRIVE.md); a atualização usa o mesmo Client ID e escopo já configurados.
 
 ### Identidade Trackr
 
@@ -244,7 +246,7 @@ Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **88 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também dezenove testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **103 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também dezenove testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 

@@ -97,4 +97,29 @@ final class GoogleDriveBackupTests: XCTestCase {
         XCTAssertNotNil(DriveBackupFile(id: "a", name: "backup", createdTime: "2026-10-23T12:00:00.123Z", size: nil).date)
         XCTAssertNotNil(DriveBackupFile(id: "a", name: "backup", createdTime: "2026-10-23T12:00:00Z", size: nil).date)
     }
+
+    func testSyncDocumentsAreListedSeparatelyFromBackupVersions() async throws {
+        DriveURLProtocol.handler = { request in
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
+            let filter = query.first { $0.name == "q" }?.value ?? ""
+            XCTAssertTrue(filter.contains("trackrSync"))
+            XCTAssertFalse(filter.contains("trackrBackup"))
+            return (200, [:], Data(#"{"files":[]}"#.utf8))
+        }
+        _ = try await api().list(token: "fake-token", synchronization: true)
+    }
+
+    func testSyncUpdatesItsOwnDocumentWithPatchInsteadOfCreatingAnotherBackup() async throws {
+        var methods: [String] = []
+        DriveURLProtocol.handler = { request in
+            methods.append(request.httpMethod!)
+            if request.httpMethod == "PATCH" {
+                XCTAssertEqual(request.url?.path, "/upload/drive/v3/files/own-document")
+                return (200, ["Location": "https://www.googleapis.com/upload/drive/v3/files?upload_id=fake"], Data())
+            }
+            return (200, [:], Data(#"{"id":"own-document","name":"Trackr-Sync.json"}"#.utf8))
+        }
+        _ = try await api().upload(Data("{}".utf8), token: "fake-token", device: UUID(), updating: "own-document")
+        XCTAssertEqual(methods, ["PATCH", "PUT"])
+    }
 }

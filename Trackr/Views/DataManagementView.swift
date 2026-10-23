@@ -26,15 +26,15 @@ struct DataManagementView: View {
     var body: some View {
         Form {
             Section {
-                Label("Armazenamento neste iPhone", systemImage: "internaldrive")
-                Text("Dados locais. Exporte um backup para recuperá-los em outra instalação.")
+                Label("Armazenamento neste aparelho", systemImage: "internaldrive")
+                Text("Dados locais, com sincronização opcional pelo Google Drive.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section {
                 NavigationLink { GoogleDriveBackupView() } label: {
                     Label("Google Drive", systemImage: "externaldrive.badge.icloud")
                 }
-            } header: { Text("Backup na nuvem") }
+            } header: { Text("Sincronização e backup") }
             Section {
                 Button("Exportar backup completo", systemImage: "square.and.arrow.up") { exportBackup() }
                 Button("Importar backup", systemImage: "square.and.arrow.down") { importing = true }

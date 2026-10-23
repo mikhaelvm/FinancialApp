@@ -29,7 +29,7 @@ struct DashboardView: View {
         let snapshot = viewModel.snapshot(transactions: transactions, cards: cards, subscriptions: subscriptions,
                                           payments: payments, month: .now, scheduled: scheduled,
                                           dismissedIDs: Set(dismissedPayments.split(separator: "\n").map(String.init)))
-        List {
+        TrackrAdaptiveSections {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Saldo na conta").font(.subheadline).foregroundStyle(.secondary)
@@ -51,25 +51,6 @@ struct DashboardView: View {
                     MoneyRow(title: "Contas agendadas", cents: snapshot.scheduledCents, symbol: "calendar")
                 }
             }
-            Section("Planejamento") {
-                NavigationLink { CashFlowReviewView() } label: {
-                    Label("Evolução da conta", systemImage: "chart.line.uptrend.xyaxis")
-                }
-                NavigationLink { BudgetSettingsView() } label: {
-                    Label("Orçamento mensal", systemImage: "chart.pie")
-                }
-                if reserveGoal > 0 {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Meta de reserva", systemImage: "target").font(.subheadline.weight(.medium))
-                        if !hideAmounts {
-                            Text("\(Money.format(max(0, snapshot.balance))) de \(Money.format(Int64(reserveGoal)))")
-                                .font(.caption).foregroundStyle(.secondary)
-                            ProgressView(value: min(Double(max(0, snapshot.balance)), reserveGoal), total: reserveGoal)
-                        }
-                    }.padding(.vertical, 4)
-                }
-                NavigationLink { ReportsView() } label: { Label("Relatórios por mês", systemImage: "chart.bar.xaxis") }
-            }
             Section {
                 if upcoming.isEmpty {
                     Label("Nenhum compromisso nos próximos 7 dias", systemImage: "checkmark.circle")
@@ -90,6 +71,26 @@ struct DashboardView: View {
                 } header: { Text("Últimas compras no cartão") } footer: {
                     Text("Compras e parcelas também aparecem no Extrato. O saldo da conta muda somente ao pagar a fatura.")
                 }
+            }
+        } secondary: {
+            Section("Planejamento") {
+                NavigationLink { CashFlowReviewView() } label: {
+                    Label("Evolução da conta", systemImage: "chart.line.uptrend.xyaxis")
+                }
+                NavigationLink { BudgetSettingsView() } label: {
+                    Label("Orçamento mensal", systemImage: "chart.pie")
+                }
+                if reserveGoal > 0 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Meta de reserva", systemImage: "target").font(.subheadline.weight(.medium))
+                        if !hideAmounts {
+                            Text("\(Money.format(max(0, snapshot.balance))) de \(Money.format(Int64(reserveGoal)))")
+                                .font(.caption).foregroundStyle(.secondary)
+                            ProgressView(value: min(Double(max(0, snapshot.balance)), reserveGoal), total: reserveGoal)
+                        }
+                    }.padding(.vertical, 4)
+                }
+                NavigationLink { ReportsView() } label: { Label("Relatórios por mês", systemImage: "chart.bar.xaxis") }
             }
             Section("Despesas por categoria") {
                 if snapshot.categories.isEmpty {

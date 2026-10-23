@@ -40,7 +40,7 @@ struct PaymentAgendaView: View {
     }
 
     var body: some View {
-        List {
+        TrackrAdaptiveSections(primaryFraction: 0.38) {
             PaymentsSectionPicker()
             Section {
                 TrackrSummaryHeader(eyebrow: "Saídas previstas • próximos 7 dias", title: Money.format(nextWeekCents),
@@ -48,6 +48,10 @@ struct PaymentAgendaView: View {
                                     symbol: "calendar.badge.clock")
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             }
+            Section("Lembretes de vencimento") {
+                Button("Configurar notificações e Siri") { showSettings = true }
+            }
+        } secondary: {
             Section {
                 Picker("Exibir", selection: $filter) {
                     ForEach(AgendaFilter.allCases) { Text($0.rawValue).tag($0) }
@@ -119,9 +123,6 @@ struct PaymentAgendaView: View {
                         }
                     }
                 }
-            }
-            Section("Lembretes de vencimento") {
-                Button("Configurar notificações e Siri") { showSettings = true }
             }
         }
         .trackrListScreen("Pagamentos")

@@ -22,7 +22,7 @@ struct SubscriptionsView: View {
     }
 
     var body: some View {
-        List {
+        TrackrAdaptiveSections(primaryFraction: 0.38) {
             PaymentsSectionPicker()
             Section {
                 TrackrSummaryHeader(eyebrow: "Seu compromisso mensal fixo", title: Money.format(monthlyCents),
@@ -48,6 +48,7 @@ struct SubscriptionsView: View {
                     }
                 }
             }
+        } secondary: {
             Section {
                 Picker("Situação", selection: $showActive) {
                     Text("Ativas").tag(true)

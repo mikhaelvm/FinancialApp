@@ -13,6 +13,7 @@ enum AppResetService {
         let subscriptions = try context.fetch(FetchDescriptor<Subscription>())
         let cards = try context.fetch(FetchDescriptor<CreditCard>())
         let categories = try context.fetch(FetchDescriptor<Category>())
+        if defaults === UserDefaults.standard { try GoogleDriveBackupService.shared.clearSynchronizationCache() }
         transactions.forEach { context.delete($0) }
         payments.forEach { context.delete($0) }
         scheduled.forEach { context.delete($0) }

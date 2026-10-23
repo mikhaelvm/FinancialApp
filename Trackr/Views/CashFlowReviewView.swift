@@ -8,7 +8,7 @@ struct CashFlowReviewView: View {
     @AppStorage("trackr.hideAmounts") private var hideAmounts = false
     var body: some View {
         let months = FinancialReview.months(transactions: transactions, payments: payments)
-        List {
+        TrackrAdaptiveSections {
             Section {
                 if hideAmounts {
                     Label("Valores e gráfico ocultos", systemImage: "eye.slash").foregroundStyle(.secondary)
@@ -28,6 +28,7 @@ struct CashFlowReviewView: View {
             } header: { Text("Últimos seis meses") } footer: {
                 Text("Entradas e saídas registradas, incluindo faturas pagas. O mês atual está em andamento.")
             }
+        } secondary: {
             ForEach(months.reversed()) { month in
                 Section(FinanceDate.monthTitle(month.month).capitalized) {
                     MoneyRow(title: "Entradas", cents: month.income, symbol: "arrow.down.left", tint: TrackrTheme.income)

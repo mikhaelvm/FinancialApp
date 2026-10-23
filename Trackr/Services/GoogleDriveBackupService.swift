@@ -15,6 +15,7 @@ final class GoogleDriveBackupService {
     var error: String?
     var message: String?
     private var revision = 0
+    private var changedWhileBusy = false
     private var pending: Task<Void, Never>?
     private var initializing: Task<Void, Never>?
     private let api = GoogleDriveAPI()
@@ -33,12 +34,27 @@ final class GoogleDriveBackupService {
         let time = UserDefaults.standard.double(forKey: "trackr.drive.lastBackup")
         return time > 0 ? Date(timeIntervalSince1970: time) : nil
     }
+    var synchronization: Bool {
+        get { UserDefaults.standard.object(forKey: "trackr.drive.syncEnabled") as? Bool ?? true }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "trackr.drive.syncEnabled")
+            scheduleBackground()
+            if newValue { Task { await foreground() } }
+        }
+    }
+    var lastSync: Date? {
+        let time = UserDefaults.standard.double(forKey: "trackr.drive.lastSync")
+        return time > 0 ? Date(timeIntervalSince1970: time) : nil
+    }
+    private var accountKey: String? {
+        UserDefaults.standard.string(forKey: "trackr.drive.user").map { Self.clientID + ":" + $0 }
+    }
     var automatic: Bool {
         get { UserDefaults.standard.bool(forKey: "trackr.drive.automatic") }
         set {
             UserDefaults.standard.set(newValue, forKey: "trackr.drive.automatic")
             if newValue { scheduleBackground(); financialDataChanged() }
-            else { pending?.cancel(); BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundID) }
+            else { scheduleBackground() }
         }
     }
 
@@ -64,7 +80,7 @@ final class GoogleDriveBackupService {
         guard !isBusy, Self.isConfigured else { return }
         guard let presenter = Self.presenter() else { error = "Não foi possível abrir o login. Tente novamente."; return }
         isBusy = true; error = nil; message = nil
-        defer { isBusy = false }
+        defer { finishOperation() }
         let currentRevision = revision
         do {
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: Self.clientID)
@@ -77,6 +93,8 @@ final class GoogleDriveBackupService {
             adopt(result.user)
             message = "Google Drive conectado."
             scheduleBackground()
+            isBusy = false
+            if synchronization { try await synchronize(context: Persistence.sharedContainer().mainContext) }
         } catch {
             if currentRevision == revision, (error as NSError).code != -5 { self.error = error.localizedDescription }
         }
@@ -85,7 +103,7 @@ final class GoogleDriveBackupService {
     private func adopt(_ user: GIDGoogleUser) {
         let defaults = UserDefaults.standard
         if defaults.string(forKey: "trackr.drive.user") != user.userID {
-            for key in ["trackr.drive.lastBackup", "trackr.drive.fingerprint", "trackr.drive.automatic"] { defaults.removeObject(forKey: key) }
+            for key in ["trackr.drive.lastBackup", "trackr.drive.fingerprint", "trackr.drive.automatic", "trackr.drive.lastSync", "trackr.drive.syncEnabled"] { defaults.removeObject(forKey: key) }
             files = []
         }
         defaults.set(user.userID, forKey: "trackr.drive.user")
@@ -102,7 +120,7 @@ final class GoogleDriveBackupService {
     func backup(context: ModelContext, automatically: Bool = false) async {
         guard !isBusy, isConnected, !AppLockService.shared.isLocked else { return }
         isBusy = true; error = nil; message = nil
-        defer { isBusy = false }
+        defer { finishOperation() }
         let currentRevision = revision
         do {
             let data = try BackupService.encode(BackupService.snapshot(context: context))
@@ -137,7 +155,7 @@ final class GoogleDriveBackupService {
     func listBackups() async {
         guard !isBusy, isConnected, !AppLockService.shared.isLocked else { return }
         isBusy = true; error = nil
-        defer { isBusy = false }
+        defer { finishOperation() }
         let currentRevision = revision
         do {
             let access = try await token()
@@ -150,7 +168,7 @@ final class GoogleDriveBackupService {
     func download(_ file: DriveBackupFile) async -> TrackrBackup? {
         guard !isBusy, isConnected, !AppLockService.shared.isLocked else { return nil }
         isBusy = true; error = nil
-        defer { isBusy = false }
+        defer { finishOperation() }
         let currentRevision = revision
         do {
             let access = try await token()
@@ -162,7 +180,7 @@ final class GoogleDriveBackupService {
 
     /// Local disconnect keeps cloud backups available for a later connection.
     func disconnect() {
-        revision += 1; pending?.cancel(); initializing?.cancel()
+        revision += 1; pending?.cancel(); initializing?.cancel(); changedWhileBusy = false
         if Self.isConfigured || isConnected { GIDSignIn.sharedInstance.signOut() }
         email = nil; files = []; message = nil; error = nil
         for key in UserDefaults.standard.dictionaryRepresentation().keys where key.hasPrefix("trackr.drive.") {
@@ -171,21 +189,98 @@ final class GoogleDriveBackupService {
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundID)
     }
 
+    /// Download all device documents before capturing local changes; the
+    /// snapshot after network awaits includes edits made while the request ran.
+    func synchronize(context: ModelContext) async throws {
+        guard !isBusy, isConnected, synchronization, !AppLockService.shared.isLocked,
+              let account = accountKey else { return }
+        isBusy = true; error = nil
+        defer { finishOperation() }
+        let currentRevision = revision
+        var state = try DriveSyncCache.load(account: account)
+        let access = try await token()
+        let remoteFiles = try await api.list(token: access, synchronization: true)
+        guard remoteFiles.count <= 256 else { throw FinanceError.invalid("Muitos aparelhos registrados no Drive. Exporte uma cópia local e revise a conta.") }
+        var ownFile: DriveBackupFile?
+        var ownDocument: DriveSyncDocument?
+        for file in remoteFiles {
+            let data = try await api.download(file, token: access)
+            let remote = try JSONDecoder().decode(DriveSyncDocument.self, from: data)
+            if remote.owner == state.document.owner, ownFile == nil { ownFile = file; ownDocument = remote }
+            try state.document.merge(remote)
+        }
+        // Upgrade the backup-only version without requiring a manual restore.
+        if remoteFiles.isEmpty, state.baseline == nil {
+            if let latest = try await api.list(token: access).first {
+                let backup = try BackupService.decode(try await api.download(latest, token: access))
+                try state.document.capture(try DriveSyncState.index(backup), baseline: nil)
+            }
+        }
+        try Task.checkCancellation()
+        guard currentRevision == revision, synchronization, !AppLockService.shared.isLocked else { return }
+        let snapshot = try BackupService.snapshot(context: context)
+        let current = try DriveSyncState.index(snapshot)
+        let hasFinancialData = snapshot.count > snapshot.categories.count
+        try state.document.capture(current, baseline: state.baseline, preferLocal: remoteFiles.isEmpty && hasFinancialData)
+        let merged = try state.materialize()
+        let mergedIndex = try DriveSyncState.index(merged)
+        // Save pending revisions before applying or uploading. A failed upload
+        // will be retried without forgetting deletions or local modifications.
+        state.baseline = current
+        try DriveSyncCache.save(state, account: account)
+        if current != mergedIndex { try DriveSyncPersistence.apply(merged, context: context) }
+        state.baseline = mergedIndex
+        try DriveSyncCache.save(state, account: account)
+        if ownDocument?.records != state.document.records {
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+            _ = try await api.upload(encoder.encode(state.document), token: access, device: state.document.owner, updating: ownFile?.id)
+        }
+        try Task.checkCancellation()
+        guard currentRevision == revision else { return }
+        UserDefaults.standard.set(Date.now.timeIntervalSince1970, forKey: "trackr.drive.lastSync")
+        message = "Dados sincronizados."
+        scheduleBackground()
+    }
+
+    func synchronizeNow(context: ModelContext) async {
+        do { try await synchronize(context: context) }
+        catch { if !(error is CancellationError) { self.error = error.localizedDescription } }
+    }
+
+    /// Local erase starts a fresh sync identity on a later connection. It must
+    /// never publish the erased database as deletions to the other devices.
+    func clearSynchronizationCache() throws {
+        try DriveSyncCache.clearAll()
+    }
+
     func financialDataChanged() {
-        guard automatic, isConnected, !isBusy else { return }
+        guard (automatic || synchronization), isConnected else { return }
+        if isBusy { changedWhileBusy = true; return }
         pending?.cancel()
         pending = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(30)); try Task.checkCancellation() }
+            do { try await Task.sleep(for: .seconds(5)); try Task.checkCancellation() }
             catch { return }
-            guard automatic, UIApplication.shared.applicationState == .active, !AppLockService.shared.isLocked else { return }
-            do { await backup(context: try Persistence.sharedContainer().mainContext, automatically: true) }
-            catch { self.error = error.localizedDescription }
+            guard UIApplication.shared.applicationState == .active, !AppLockService.shared.isLocked else { return }
+            do {
+                let context = try Persistence.sharedContainer().mainContext
+                if synchronization { try await synchronize(context: context) }
+                if automatic { await backup(context: context, automatically: true) }
+            } catch { if !(error is CancellationError) { self.error = error.localizedDescription } }
         }
+    }
+
+    private func finishOperation() {
+        isBusy = false
+        if changedWhileBusy { changedWhileBusy = false; financialDataChanged() }
     }
 
     func foreground() async {
         await initialize()
-        financialDataChanged()
+        if synchronization, isConnected {
+            do { try await synchronize(context: Persistence.sharedContainer().mainContext) }
+            catch { if !(error is CancellationError) { self.error = error.localizedDescription } }
+        }
+        if automatic { financialDataChanged() }
         scheduleBackground()
     }
 
@@ -195,10 +290,12 @@ final class GoogleDriveBackupService {
                 let service = Self.shared
                 service.scheduleBackground()
                 // Protected apps only upload while the user has an unlocked foreground session.
-                guard service.automatic, !AppLockService.protectionEnabled else { task.setTaskCompleted(success: true); return }
+                guard (service.automatic || service.synchronization), !AppLockService.protectionEnabled else { task.setTaskCompleted(success: true); return }
                 await service.initialize()
                 do {
-                    await service.backup(context: try Persistence.sharedContainer().mainContext, automatically: true)
+                    let context = try Persistence.sharedContainer().mainContext
+                    if service.synchronization { try await service.synchronize(context: context) }
+                    if service.automatic { await service.backup(context: context, automatically: true) }
                     task.setTaskCompleted(success: !Task.isCancelled && service.error == nil)
                 } catch { task.setTaskCompleted(success: false) }
             }
@@ -207,8 +304,9 @@ final class GoogleDriveBackupService {
     }
 
     private func scheduleBackground() {
-        guard automatic, Self.isConfigured else { return }
+        guard Self.isConfigured else { return }
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundID)
+        guard isConnected, automatic || synchronization else { return }
         let request = BGAppRefreshTaskRequest(identifier: Self.backgroundID)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 6 * 60 * 60)
         try? BGTaskScheduler.shared.submit(request)

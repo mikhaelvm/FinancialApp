@@ -65,13 +65,13 @@ struct GoogleDriveAPI {
         try await send(url, token: token, method: method).0
     }
 
-    func list(token: String) async throws -> [DriveBackupFile] {
+    func list(token: String, synchronization: Bool = false) async throws -> [DriveBackupFile] {
         struct Page: Decodable { let files: [DriveBackupFile]; let nextPageToken: String? }
         var files: [DriveBackupFile] = [], page: String?
         repeat {
             var url = URLComponents(string: "https://www.googleapis.com/drive/v3/files")!
             url.queryItems = [URLQueryItem(name: "spaces", value: "appDataFolder"),
-                             URLQueryItem(name: "q", value: "trashed = false and appProperties has { key='trackrBackup' and value='1' }"),
+                             URLQueryItem(name: "q", value: "trashed = false and appProperties has { key='\(synchronization ? "trackrSync" : "trackrBackup")' and value='1' }"),
                              URLQueryItem(name: "fields", value: "nextPageToken,files(id,name,createdTime,size)"),
                              URLQueryItem(name: "orderBy", value: "createdTime desc"), URLQueryItem(name: "pageSize", value: "100")]
             if let page { url.queryItems?.append(URLQueryItem(name: "pageToken", value: page)) }
@@ -81,15 +81,20 @@ struct GoogleDriveAPI {
         return files
     }
 
-    func upload(_ data: Data, token: String) async throws -> DriveBackupFile {
+    func upload(_ data: Data, token: String, device: UUID? = nil, updating fileID: String? = nil) async throws -> DriveBackupFile {
         guard data.count <= DriveBackupPolicy.maximumBytes else { throw FinanceError.invalid("O backup deve ter até 25 MB.") }
         let formatter = ISO8601DateFormatter()
-        let name = "Trackr-Backup-" + formatter.string(from: .now).replacingOccurrences(of: ":", with: "-") + ".json"
-        let metadata: [String: Any] = ["name": name, "mimeType": "application/json", "parents": ["appDataFolder"],
-                                       "appProperties": ["trackrBackup": "1"]]
-        // A resumable session also supports backups larger than the 5 MB simple-upload recommendation.
-        let url = URL(string: "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,createdTime,size")!
-        let (_, response) = try await send(url, token: token, method: "POST",
+        let backupName = "Trackr-Backup-" + formatter.string(from: .now).replacingOccurrences(of: ":", with: "-") + ".json"
+        let name = device.map { "Trackr-Sync-" + $0.uuidString + ".json" } ?? backupName
+        var metadata: [String: Any] = ["name": name, "mimeType": "application/json",
+                                       "appProperties": [device == nil ? "trackrBackup" : "trackrSync": "1"]]
+        if fileID == nil { metadata["parents"] = ["appDataFolder"] }
+        var endpoint = URLComponents(string: "https://www.googleapis.com/upload/drive/v3/files")!
+        if let fileID { endpoint.path += "/" + fileID }
+        endpoint.queryItems = [URLQueryItem(name: "uploadType", value: "resumable"),
+                               URLQueryItem(name: "fields", value: "id,name,createdTime,size")]
+        let url = endpoint.url!
+        let (_, response) = try await send(url, token: token, method: fileID == nil ? "POST" : "PATCH",
             body: JSONSerialization.data(withJSONObject: metadata), contentType: "application/json; charset=UTF-8",
             headers: ["X-Upload-Content-Type": "application/json", "X-Upload-Content-Length": String(data.count)])
         guard let location = response.value(forHTTPHeaderField: "Location"), let destination = URL(string: location),

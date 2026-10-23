@@ -12,7 +12,7 @@ struct ReportsView: View {
     @AppStorage("trackr.hideAmounts") private var hideAmounts = false
     var body: some View {
         let snapshot = viewModel.snapshot(transactions: transactions, cards: cards, subscriptions: subscriptions, payments: payments, month: month)
-        List {
+        TrackrAdaptiveSections {
             Section {
                 HStack {
                     Button("Mês anterior", systemImage: "chevron.left") { month = FinanceDate.monthOffset(-1, from: month) }.labelStyle(.iconOnly)
@@ -28,6 +28,7 @@ struct ReportsView: View {
                 MoneyRow(title: "Faturas pagas", cents: snapshot.payments, symbol: "creditcard")
                 MoneyRow(title: "Resultado na conta", cents: snapshot.income - snapshot.cashExpenses - snapshot.payments, symbol: "equal.circle")
             }
+        } secondary: {
             Section {
                 if !hideAmounts && !snapshot.categories.isEmpty {
                     Chart(Array(snapshot.categories.prefix(8))) { item in

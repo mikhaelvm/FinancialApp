@@ -6,55 +6,44 @@ struct CreditCardsView: View {
     @Environment(\.modelContext) private var context
     @Environment(TrackrRouter.self) private var router
     @Query(sort: \CreditCard.name) private var cards: [CreditCard]
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showAdd = false
     @State private var deleting: CreditCard?
     @State private var error: String?
     var body: some View {
-        List {
-            if cards.isEmpty {
-                ContentUnavailableView("Seus cartões", systemImage: "creditcard",
-                                       description: Text("Cadastre um cartão para acompanhar limites, parcelas e faturas."))
-            }
-            ForEach(cards) { card in
-                Section {
-                Button { router.cardPath.append(card.id) } label: {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Label(card.name, systemImage: "creditcard.fill").font(.headline)
-                            Spacer()
-                            Image(systemName: "wave.3.right").accessibilityHidden(true)
+        GeometryReader { geometry in
+            if UIDevice.current.userInterfaceIdiom == .pad,
+               geometry.size.width >= 950, geometry.size.width > geometry.size.height,
+               !typeSize.isAccessibilitySize {
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 24) {
+                        ForEach(cards) { card in
+                            cardButton(card)
+                                .padding(20)
+                                .background(Color(uiColor: .secondarySystemGroupedBackground),
+                                            in: RoundedRectangle(cornerRadius: TrackrTheme.cornerRadius))
+                                .contextMenu { Button("Excluir cartão", systemImage: "trash", role: .destructive) { deleting = card } }
+
                         }
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Limite disponível").font(.caption).foregroundStyle(.secondary)
-                                Text(hideAmounts ? "••••" : Money.format(card.availableLimitCents)).font(.title2.bold()).monospacedDigit()
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.tertiary).accessibilityHidden(true)
-                        }
-                        ProgressView(value: min(Double(card.usedLimitCents), Double(card.limitCents)),
-                                     total: Double(max(1, card.limitCents)))
-                            .tint(card.availableLimitCents == 0 ? .orange : TrackrTheme.accent)
-                            .opacity(hideAmounts ? 0 : 1)
-                            .accessibilityLabel("Limite utilizado")
-                            .accessibilityValue(hideAmounts ? "Valor oculto" : Money.format(card.usedLimitCents))
-                        HStack(alignment: .top) {
-                            Text("Limite total\n\(hideAmounts ? "••••" : Money.format(card.limitCents))")
-                            Spacer()
-                            Text("Fecha \(card.closingDay) • Vence \(card.dueDay)")
-                        }.font(.caption).foregroundStyle(.secondary)
                     }
-                    .foregroundStyle(Color.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                    .padding(24).frame(maxWidth: 1400)
+                    .frame(maxWidth: .infinity)
+                    if cards.isEmpty { emptyState }
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("Abrir compras e faturas do cartão")
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20))
-                .swipeActions(allowsFullSwipe: false) {
-                    Button("Excluir", role: .destructive) { deleting = card }.tint(.red)
-                }
+                .navigationBarTitleDisplayMode(.inline)
+            } else {
+                List {
+                    if cards.isEmpty { emptyState }
+                    ForEach(cards) { card in
+                        Section {
+                            cardButton(card)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20))
+                                .swipeActions(allowsFullSwipe: false) {
+                                    Button("Excluir", role: .destructive) { deleting = card }.tint(.red)
+                                }
+                        }
+                    }
                 }
             }
         }
@@ -80,6 +69,47 @@ struct CreditCardsView: View {
         } message: { Text(CreditCardViewModel.deletionExplanation) }
         .financeError($error)
     }
+    private var emptyState: some View {
+        ContentUnavailableView("Seus cartões", systemImage: "creditcard",
+                               description: Text("Cadastre um cartão para acompanhar limites, parcelas e faturas."))
+    }
+
+    private func cardButton(_ card: CreditCard) -> some View {
+        Button { router.cardPath.append(card.id) } label: {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Label(card.name, systemImage: "creditcard.fill").font(.headline)
+                    Spacer()
+                    Image(systemName: "wave.3.right").accessibilityHidden(true)
+                }
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Limite disponível").font(.caption).foregroundStyle(.secondary)
+                        Text(hideAmounts ? "••••" : Money.format(card.availableLimitCents)).font(.title2.bold()).monospacedDigit()
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.tertiary).accessibilityHidden(true)
+                }
+                ProgressView(value: min(Double(card.usedLimitCents), Double(card.limitCents)),
+                             total: Double(max(1, card.limitCents)))
+                    .tint(card.availableLimitCents == 0 ? .orange : TrackrTheme.accent)
+                    .opacity(hideAmounts ? 0 : 1)
+                    .accessibilityLabel("Limite utilizado")
+                    .accessibilityValue(hideAmounts ? "Valor oculto" : Money.format(card.usedLimitCents))
+                HStack(alignment: .top) {
+                    Text("Limite total\n\(hideAmounts ? "••••" : Money.format(card.limitCents))")
+                    Spacer()
+                    Text("Fecha \(card.closingDay) • Vence \(card.dueDay)")
+                }.font(.caption).foregroundStyle(.secondary)
+            }
+            .foregroundStyle(Color.primary)
+            .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Abrir compras e faturas do cartão")
+    }
+
 }
 
 struct CardFormView: View {

@@ -39,7 +39,7 @@ struct CreditCardDetailView: View {
             let month = FinanceDate.monthOffset(offset, from: .now)
             return MonthForecast(month: month, invoiceCents: invoices.filter { FinanceDate.sameMonth($0.dueDate, month) }.reduce(0) { $0 + $1.remainingCents })
         }
-        return List {
+        return TrackrAdaptiveSections {
             Section("Limite") {
                 CreditLimitSummary(card: card)
                 if card.usedLimitCents > card.limitCents {
@@ -78,6 +78,7 @@ struct CreditCardDetailView: View {
                 Text("Registrar pagamento representa uma saída da conta e libera o limite. O app não movimenta dinheiro no banco.")
             }
             CardPurchasesSection(card: card, invoice: selected)
+        } secondary: {
             Section {
                 InvoiceForecastChart(forecasts: forecasts)
                 ForEach(forecasts) { item in MonthAmountRow(month: item.month, cents: item.invoiceCents) }

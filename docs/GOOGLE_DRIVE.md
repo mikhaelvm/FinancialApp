@@ -1,4 +1,4 @@
-# Configurar backup do Trackr no Google Drive
+# Sincronização e backup do Trackr no Google Drive
 
 O código está preparado para Google Drive, mas o login só funciona depois de configurar um cliente OAuth seu. Sem Client ID, o app compila normalmente e mostra “Configuração do Google pendente”. O backup manual pelo app Arquivos continua disponível.
 
@@ -57,31 +57,40 @@ TRACKR_GOOGLE_REVERSED_CLIENT_ID: 'com.googleusercontent.apps.1234567890-abcdef'
 
 Use seus valores reais, sem os exemplos. Faça commit/push, aguarde o workflow, baixe `Trackr.ipa` e assine como de costume. O bundle precisa continuar sendo `com.mikhael.trackr`; o assinador precisa preservar os URL schemes e o acesso normal ao Keychain. Tokens são gerenciados pelo SDK do Google no Keychain, não pelo JSON do backup.
 
-## 5. Usar no iPhone
+## 5. Sincronizar iPhone e iPad
 
-1. Abra **Ajustes do Trackr → Dados e backup → Google Drive**.
-2. Toque em **Conectar Google Drive**, escolha sua conta e autorize a área privada.
-3. Faça um primeiro backup com **Fazer backup agora**.
-4. Ative **Backup automático** se desejar.
-5. Para recuperar dados, toque em **Buscar backups**, selecione uma versão e confirme.
+1. Atualize **os dois aparelhos** para Trackr 2.2 ou superior.
+2. Primeiro, no iPhone que contém seus dados, abra **Ajustes → Dados e backup → Google Drive** e toque em **Sincronizar agora**. Uma sessão já conectada é reutilizada.
+3. No iPad, conecte a **mesma conta Google**, mantenha **Sincronizar entre aparelhos** ativado e aguarde a confirmação.
+4. Os registros são buscados automaticamente. O botão **Sincronizar agora** permite repetir a operação.
 
-O backup automático agrupa alterações por 30 segundos e só envia quando o conteúdo mudou. Também verifica alterações ao abrir o app. O iOS pode conceder execuções adicionais em segundo plano, mas não garante frequência nem horário. Com o bloqueio de acesso do Trackr ativo, o envio ocorre somente com uma sessão aberta e desbloqueada.
+A sincronização é ativada por padrão ao conectar. Combina registros financeiros, categorias, cartões, recorrências, contas agendadas e dispensas. A primeira conexão preserva registros locais exclusivos e busca o estado remoto; registros com a mesma identidade seguem a versão remota. Na migração do backup antigo, o aparelho com dados locais financeiros tem prioridade sobre a cópia antiga. Por isso, sincronize primeiro o iPhone principal. Um aparelho ainda usando a versão antiga só envia backups e não participa da sincronização.
 
-São mantidas as cinco versões mais recentes na área privada, **após** o novo envio ser confirmado. Essa área não aparece como pasta navegável no Drive. A restauração adiciona registros ausentes e preserva os existentes; não substitui valores já cadastrados. Preferências do aparelho não são restauradas.
+As mudanças são enviadas cerca de cinco segundos após salvar. Com o app aberto, também busca novidades aproximadamente a cada minuto e ao voltar à tela/desbloquear. Offline, continua funcionando localmente e combina alterações na próxima conexão. Isso não é sincronização instantânea em tempo real nem execução contínua com o app fechado. O iOS decide quando permite atualizações em segundo plano. Com bloqueio de acesso ativo, só sincroniza em uma sessão aberta e desbloqueada.
 
-Desconectar ou redefinir o Trackr interrompe o automático e remove a sessão local. Isso não apaga os backups do Drive. Ao reinstalar, conecte a mesma conta usando o mesmo projeto OAuth para encontrá-los. Backups podem ser removidos pelas opções de aplicativos conectados do Google; não os trate como única cópia.
+Cada instalação mantém um documento próprio na área privada do Drive. Revisões por registro combinam alterações independentes; marcadores persistentes impedem que exclusões reapareçam ao reconectar um aparelho antigo. Edições simultâneas no mesmo registro usam revisão lógica e desempate por identificador do aparelho. Uma exclusão recebida vence uma edição offline daquele registro. Cobranças automáticas, recibos de contas agendadas e categorias equivalentes recebem identidades estáveis. Não registre o mesmo pagamento manual nos dois aparelhos enquanto estiverem offline: ações manuais distintas podem gerar registros distintos.
 
-O conteúdo financeiro é enviado em JSON pela conexão HTTPS. O Trackr não adiciona criptografia com senha ao arquivo. Continue usando a exportação local quando quiser uma cópia independente.
+Aparência, ocultação de valores, biometria, orçamento, metas e preferências de notificações continuam próprias de cada aparelho. Use o mesmo projeto OAuth e bundle nas duas instalações.
 
-## Conferência após a configuração
+## 6. Backups independentes da sincronização
 
-- Login, cancelamento e retorno ao Trackr.
-- Backup manual e listagem das versões.
-- Nenhum envio automático antes de ativar a opção.
-- Alterações agrupadas; sem nova versão quando nada mudou.
-- Restauração em instalação de teste, sem apagar os dados da instalação principal.
-- Conta desconectada, sem internet, sessão expirada e armazenamento insuficiente.
-- Bloqueio de acesso e redefinição interrompem novos envios conforme descrito acima.
+**Fazer backup agora** cria uma cópia datada; **Backup automático** é opcional e cria versões somente quando os dados mudam. Mantém as cinco versões mais recentes após confirmar o novo envio. Os documentos de sincronização não entram nessa limpeza. A restauração em **Buscar backups** adiciona registros ausentes e preserva os atuais; dados restaurados passam a fazer parte da sincronização, se ela estiver ligada.
+
+A área privada não aparece como pasta navegável no Drive. Desconectar interrompe a sincronização e os backups automáticos, mas mantém dados locais e arquivos remotos. **Apagar todos os dados** redefine somente o aparelho e esquece seu histórico local de sincronização, sem enviar uma exclusão em massa para os outros aparelhos. Reconectar pode trazer os dados da conta novamente. Os arquivos remotos podem ser removidos nas opções de aplicativos conectados do Google.
+
+Os registros viajam em JSON por HTTPS. O Trackr não adiciona criptografia com senha ao arquivo. Continue exportando uma cópia local quando precisar de um backup independente.
+
+## Conferência da versão no iPhone e iPad
+
+- Primeira conexão importa automaticamente e não duplica categorias padrão.
+- Criar, editar e excluir lançamentos, cartões e recorrências em cada aparelho; verificar no outro.
+- Alterar registros diferentes offline nos dois aparelhos e reconectar; conferir a combinação.
+- Dispensar e reativar pagamentos; conferir a Agenda e o Resumo nos dois aparelhos.
+- Cobranças automáticas geradas nos dois aparelhos não duplicam os valores.
+- Backup manual, listagem das cinco versões e restauração aditiva.
+- Conta desconectada, sessão expirada, sem rede e espaço insuficiente: dados locais permanecem utilizáveis.
+- Bloqueio de acesso e redefinição respeitam as regras descritas acima.
+- iPad horizontal, vertical e Split View: colunas e grade somente em janela horizontal com pelo menos 950 pontos; Dynamic Type de acessibilidade mantém uma coluna.
 
 ## Fontes oficiais
 
