@@ -1,7 +1,7 @@
 import XCTest
 import SwiftData
-@testable import FinancialApp
-@testable import class FinancialApp.Category
+@testable import Trackr
+@testable import class Trackr.Category
 
 @MainActor
 final class BackupServiceTests: XCTestCase {

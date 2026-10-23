@@ -1,6 +1,6 @@
 import XCTest
 import LocalAuthentication
-@testable import FinancialApp
+@testable import Trackr
 
 @MainActor
 private final class StubDeviceAuthentication: DeviceAuthenticating {
@@ -30,7 +30,7 @@ private final class StubDeviceAuthentication: DeviceAuthenticating {
 @MainActor
 final class AppLockTests: XCTestCase {
     private func fixture(enabled: Bool = false) throws -> (AppLockService, StubDeviceAuthentication, UserDefaults, String) {
-        let name = "LedgerTests.Lock.\(UUID().uuidString)"
+        let name = "TrackrTests.Lock.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         defaults.set(enabled, forKey: AppLockService.enabledKey)
         let authentication = StubDeviceAuthentication()

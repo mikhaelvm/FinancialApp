@@ -1,7 +1,7 @@
 import XCTest
 import SwiftData
-@testable import FinancialApp
-@testable import class FinancialApp.Category
+@testable import Trackr
+@testable import class Trackr.Category
 
 final class StatementParserTests: XCTestCase {
     func testBrazilianAndInternationalNumbers() {
@@ -44,7 +44,7 @@ final class StatementParserTests: XCTestCase {
     }
 
     func testOFXSGMLAndXMLUseStableFITIDAndDoNotImportBalance() throws {
-        let sgml = "OFXHEADER:100\n<OFX><CURDEF>BRL<BANKID>341<ACCTID>123<BANKTRANLIST><STMTTRN><DTPOSTED>20250102120000[-3:BRT]<TRNAMT>-12.34<FITID>A1<MEMO>Loja &amp; Cia</STMTTRN><STMTTRN><DTPOSTED>20250103<TRNAMT>100.00<FITID>A2<NAME>Salário</STMTTRN></BANKTRANLIST><LEDGERBAL><BALAMT>5000.00</LEDGERBAL></OFX>"
+        let sgml = "OFXHEADER:100\n<OFX><CURDEF>BRL<BANKID>341<ACCTID>123<BANKTRANLIST><STMTTRN><DTPOSTED>20250102120000[-3:BRT]<TRNAMT>-12.34<FITID>A1<MEMO>Loja &amp; Cia</STMTTRN><STMTTRN><DTPOSTED>20250103<TRNAMT>100.00<FITID>A2<NAME>Salário</STMTTRN></BANKTRANLIST><TRACKRBAL><BALAMT>5000.00</TRACKRBAL></OFX>"
         let a = try StatementParser.ofx(sgml, bank: .itau)
         let b = try StatementParser.ofx(sgml, bank: .other)
         XCTAssertEqual(a.rows.map(\.signedCents), [-1234, 10000])

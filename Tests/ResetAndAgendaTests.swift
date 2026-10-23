@@ -1,7 +1,7 @@
 import XCTest
 import SwiftData
-@testable import FinancialApp
-@testable import class FinancialApp.Category
+@testable import Trackr
+@testable import class Trackr.Category
 
 @MainActor
 final class ResetAndAgendaTests: XCTestCase {
@@ -37,10 +37,10 @@ final class ResetAndAgendaTests: XCTestCase {
         context.insert(InvoicePayment(card: card, invoiceDueDate: .now, date: .now, amountCents: 100))
         context.insert(ScheduledPayment(title: "Conta", amountCents: 100, dueDate: .now))
         try context.save()
-        let suite = "LedgerTests.Reset.\(UUID().uuidString)"
+        let suite = "TrackrTests.Reset.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set("pink", forKey: "ledger.accent")
+        defaults.set("pink", forKey: "trackr.accent")
         defaults.set(true, forKey: "reminders.enabled")
         defaults.set("retained", forKey: "unrelated")
         for revision in 1...2 {
@@ -53,9 +53,9 @@ final class ResetAndAgendaTests: XCTestCase {
             let categories = try context.fetch(FetchDescriptor<Category>())
             XCTAssertEqual(categories.count, 9)
             XCTAssertEqual(categories.first { $0.name == "Streaming" }?.colorName, "purple")
-            XCTAssertNil(defaults.object(forKey: "ledger.accent"))
+            XCTAssertNil(defaults.object(forKey: "trackr.accent"))
             XCTAssertNil(defaults.object(forKey: "reminders.enabled"))
-            XCTAssertEqual(defaults.integer(forKey: "ledger.resetRevision"), revision)
+            XCTAssertEqual(defaults.integer(forKey: "trackr.resetRevision"), revision)
             XCTAssertEqual(defaults.string(forKey: "unrelated"), "retained")
         }
     }

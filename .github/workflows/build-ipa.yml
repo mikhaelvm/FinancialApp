@@ -1,4 +1,4 @@
-name: Build Ledger IPA
+name: Build Trackr IPA
 
 on:
   workflow_dispatch:
@@ -70,8 +70,8 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild test \
-            -project FinancialApp.xcodeproj \
-            -scheme FinancialApp \
+            -project Trackr.xcodeproj \
+            -scheme Trackr \
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -parallel-testing-enabled NO \
@@ -82,11 +82,11 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild archive \
-            -project FinancialApp.xcodeproj \
-            -scheme FinancialApp \
+            -project Trackr.xcodeproj \
+            -scheme Trackr \
             -configuration Release \
             -destination 'generic/platform=iOS' \
-            -archivePath "$PWD/build/FinancialApp.xcarchive" \
+            -archivePath "$PWD/build/Trackr.xcarchive" \
             -derivedDataPath "$PWD/build/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -95,21 +95,21 @@ jobs:
       - name: Package IPA
         run: |
           set -euo pipefail
-          APP="$PWD/build/FinancialApp.xcarchive/Products/Applications/FinancialApp.app"
+          APP="$PWD/build/Trackr.xcarchive/Products/Applications/Trackr.app"
           test -d "$APP"
-          test -f "$APP/FinancialApp"
-          test -f "$APP/PlugIns/LedgerWidgets.appex/LedgerWidgets"
+          test -f "$APP/Trackr"
+          test -f "$APP/PlugIns/TrackrWidgets.appex/TrackrWidgets"
           mkdir -p build/package/Payload
-          ditto "$APP" build/package/Payload/FinancialApp.app
+          ditto "$APP" build/package/Payload/Trackr.app
           cd build/package
-          zip -qry ../Ledger.ipa Payload
-          unzip -t ../Ledger.ipa
+          zip -qry ../Trackr.ipa Payload
+          unzip -t ../Trackr.ipa
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Ledger-unsigned
-          path: build/Ledger.ipa
+          name: Trackr-unsigned
+          path: build/Trackr.ipa
           if-no-files-found: error
           retention-days: 14
 

@@ -1,4 +1,4 @@
-name: FinancialApp
+name: Trackr
 options:
   bundleIdPrefix: com.mikhael
   deploymentTarget:
@@ -12,29 +12,29 @@ settings:
     SWIFT_VERSION: '5.0'
     IPHONEOS_DEPLOYMENT_TARGET: '17.0'
     TARGETED_DEVICE_FAMILY: '1,2'
-    MARKETING_VERSION: '1.5.0'
-    CURRENT_PROJECT_VERSION: '8'
+    MARKETING_VERSION: '2.0.0'
+    CURRENT_PROJECT_VERSION: '9'
     CODE_SIGNING_ALLOWED: NO
-    LEDGER_APP_GROUP: group.com.mikhael.FinancialApp
-    CODE_SIGN_ENTITLEMENTS: Shared/Ledger.entitlements
+    TRACKR_APP_GROUP: group.com.mikhael.trackr
+    CODE_SIGN_ENTITLEMENTS: Shared/Trackr.entitlements
 targets:
-  FinancialApp:
+  Trackr:
     type: application
     platform: iOS
     sources:
       - path: Shared
-        excludes: [Ledger.entitlements]
-      - path: FinancialApp
+        excludes: [Trackr.entitlements]
+      - path: Trackr
         excludes: [Info.plist, Settings.bundle]
-      - path: FinancialApp/Settings.bundle
+      - path: Trackr/Settings.bundle
         type: folder
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikhael.FinancialApp
-        INFOPLIST_FILE: FinancialApp/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikhael.trackr
+        INFOPLIST_FILE: Trackr/Info.plist
         GENERATE_INFOPLIST_FILE: NO
-        ASSETCATALOG_COMPILER_APPICON_NAME: Ledger
+        ASSETCATALOG_COMPILER_APPICON_NAME: Trackr
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
       - sdk: SwiftUI.framework
@@ -46,47 +46,47 @@ targets:
       - sdk: PDFKit.framework
       - sdk: Vision.framework
       - sdk: LocalAuthentication.framework
-      - target: LedgerWidgets
+      - target: TrackrWidgets
         embed: true
-  LedgerWidgets:
+  TrackrWidgets:
     type: app-extension
     platform: iOS
     sources:
       - path: Shared
-        excludes: [Ledger.entitlements]
-      - path: LedgerWidgets
+        excludes: [Trackr.entitlements]
+      - path: TrackrWidgets
         excludes: [Info.plist]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikhael.FinancialApp.Widgets
-        INFOPLIST_FILE: LedgerWidgets/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikhael.trackr.Widgets
+        INFOPLIST_FILE: TrackrWidgets/Info.plist
         GENERATE_INFOPLIST_FILE: NO
         APPLICATION_EXTENSION_API_ONLY: YES
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) LEDGER_WIDGET_EXTENSION"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) TRACKR_WIDGET_EXTENSION"
         SKIP_INSTALL: YES
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
       - sdk: AppIntents.framework
-  FinancialAppTests:
+  TrackrTests:
     type: bundle.unit-test
     platform: iOS
     sources: [Tests]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikhael.FinancialAppTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikhael.trackrTests
         CODE_SIGN_ENTITLEMENTS: ''
     dependencies:
-      - target: FinancialApp
+      - target: Trackr
 schemes:
-  FinancialApp:
+  Trackr:
     build:
       targets:
-        FinancialApp: all
-        FinancialAppTests: [test]
+        Trackr: all
+        TrackrTests: [test]
     test:
-      targets: [FinancialAppTests]
+      targets: [TrackrTests]
       gatherCoverageData: true
     archive:
       config: Release

@@ -1,7 +1,7 @@
 import XCTest
 import SwiftData
-@testable import FinancialApp
-@testable import class FinancialApp.Category
+@testable import Trackr
+@testable import class Trackr.Category
 
 @MainActor
 final class FinancialReviewTests: XCTestCase {
@@ -46,11 +46,11 @@ final class FinancialReviewTests: XCTestCase {
 
     func testPeriodsCoverYearBoundariesAndExactlyThirtyCalendarDays() {
         let today = date(1, 15)
-        XCTAssertTrue(LedgerTransactionPeriod.previousMonth.includes(date(12, 31, year: 2025), today: today))
-        XCTAssertFalse(LedgerTransactionPeriod.previousMonth.includes(date(1, 1), today: today))
-        XCTAssertTrue(LedgerTransactionPeriod.thirtyDays.includes(date(12, 17, year: 2025), today: today))
-        XCTAssertFalse(LedgerTransactionPeriod.thirtyDays.includes(date(12, 16, year: 2025), today: today))
-        XCTAssertFalse(LedgerTransactionPeriod.thirtyDays.includes(date(1, 16), today: today))
+        XCTAssertTrue(TrackrTransactionPeriod.previousMonth.includes(date(12, 31, year: 2025), today: today))
+        XCTAssertFalse(TrackrTransactionPeriod.previousMonth.includes(date(1, 1), today: today))
+        XCTAssertTrue(TrackrTransactionPeriod.thirtyDays.includes(date(12, 17, year: 2025), today: today))
+        XCTAssertFalse(TrackrTransactionPeriod.thirtyDays.includes(date(12, 16, year: 2025), today: today))
+        XCTAssertFalse(TrackrTransactionPeriod.thirtyDays.includes(date(1, 16), today: today))
     }
 
     func testDraftCreatesFreshCashWithoutCarryingImportedIdentityOrRecurrence() throws {
@@ -58,7 +58,7 @@ final class FinancialReviewTests: XCTestCase {
         let context = container.mainContext
         let original = Transaction(title: "Mercado", amountCents: 5000, kind: .expense, date: date(9, 10), recurrenceKey: "statement:old")
         context.insert(original); try context.save()
-        let draft = LedgerTransactionDraft(transaction: original)
+        let draft = TrackrTransactionDraft(transaction: original)
         try TransactionViewModel().saveCash(context: context, title: draft.title, amountText: Money.input(draft.amountCents), kind: draft.kind, date: date(10, 22), category: nil)
         let rows = try context.fetch(FetchDescriptor<Transaction>())
         XCTAssertEqual(rows.count, 2)

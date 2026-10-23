@@ -1,8 +1,8 @@
 import XCTest
 import SwiftData
-@testable import FinancialApp
+@testable import Trackr
 // A scoped import selects our model over ObjectiveC.Category exposed by XCTest.
-@testable import class FinancialApp.Category
+@testable import class Trackr.Category
 
 @MainActor
 final class PersistenceAndCashFlowTests: XCTestCase {
@@ -122,6 +122,37 @@ final class PersistenceAndCashFlowTests: XCTestCase {
         XCTAssertEqual(card.usedLimitCents, 0)
     }
 
+    func testAutomaticCashDeletionDoesNotRecreateReceiptOrPauseNextRenewal() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let subscription = Subscription(title: "Internet", amountCents: 9990, cycle: .monthly,
+                                        nextRenewalDate: date(2025, 1, 23), category: nil, card: nil)
+        context.insert(subscription)
+        let engine = RecurrenceEngine()
+        try engine.synchronize(context: context, today: date(2025, 1, 23))
+        let transaction = try XCTUnwrap(try context.fetch(FetchDescriptor<Transaction>()).first)
+        try TransactionViewModel().deleteCash(transaction, context: context)
+        try engine.synchronize(context: context, today: date(2025, 1, 23))
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 0)
+        XCTAssertTrue(subscription.isActive)
+        XCTAssertEqual(subscription.nextRenewalDate, date(2025, 2, 23))
+        try engine.synchronize(context: context, today: date(2025, 2, 23))
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 1)
+    }
+
+    func testDeletingScheduledReceiptClearsPaidLinkAndReturnsBillToAgenda() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let bill = ScheduledPayment(title: "Conta", amountCents: 10000, dueDate: date(2025, 1, 23))
+        context.insert(bill); try context.save()
+        try ScheduledPaymentViewModel().pay(bill, context: context)
+        let transaction = try XCTUnwrap(try context.fetch(FetchDescriptor<Transaction>()).first)
+        try TransactionViewModel().deleteCash(transaction, context: context)
+        XCTAssertFalse(bill.isPaid)
+        XCTAssertNil(bill.paidTransactionID)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 0)
+    }
+
     func testDeletingSubscriptionKeepsHistoricalCharges() throws {
         let container = try Persistence.makeContainer(inMemory: true)
         let context = container.mainContext
@@ -133,7 +164,8 @@ final class PersistenceAndCashFlowTests: XCTestCase {
         let transaction = try XCTUnwrap(try context.fetch(FetchDescriptor<Transaction>()).first)
         XCTAssertNil(transaction.subscription)
         XCTAssertEqual(transaction.amountCents, 2000)
-        XCTAssertThrowsError(try TransactionViewModel().deleteCash(transaction, context: context))
+        try TransactionViewModel().deleteCash(transaction, context: context)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 0)
     }
 
     func testPausingSubscriptionDoesNotCreateNewCharges() throws {

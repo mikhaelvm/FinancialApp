@@ -2,9 +2,9 @@ import XCTest
 import struct SwiftUI.Binding
 import UIKit
 import SwiftData
-@testable import FinancialApp
-@testable import class FinancialApp.Category
-@testable import class FinancialApp.Transaction
+@testable import Trackr
+@testable import class Trackr.Category
+@testable import class Trackr.Transaction
 
 @MainActor
 final class CardOperationsAndMoneyTests: XCTestCase {
@@ -128,10 +128,10 @@ final class CardOperationsAndMoneyTests: XCTestCase {
     }
 
     func testLegacyDeepLinksOpenTheCorrectUnifiedPaymentsSection() {
-        let router = LedgerRouter()
-        router.open(URL(string: "ledger://subscriptions")!)
+        let router = TrackrRouter()
+        router.open(URL(string: "trackr://subscriptions")!)
         XCTAssertEqual(router.selectedTab, .agenda); XCTAssertEqual(router.paymentsSection, .recurring)
-        router.open(URL(string: "ledger://agenda")!)
+        router.open(URL(string: "trackr://agenda")!)
         XCTAssertEqual(router.selectedTab, .agenda); XCTAssertEqual(router.paymentsSection, .calendar)
         router.openReminder(kind: "subscription")
         XCTAssertEqual(router.paymentsSection, .recurring)

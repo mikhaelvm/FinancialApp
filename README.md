@@ -1,8 +1,21 @@
-# Ledger — iOS
+# Trackr — iOS
 
 Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, sem CloudKit, servidor ou assinatura de sincronização. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
-## Versão 1.5.0
+## Versão 2.0.0 — Trackr
+
+- Nome, código, pastas, targets, URLs (`trackr://`), widgets, controles, Atalhos e workflow renomeados para Trackr.
+- Bundle principal `com.mikhael.trackr`; App Group `group.com.mikhael.trackr`.
+- Azul do sistema como destaque padrão. As demais opções de personalização permanecem.
+- Nova logo vetorial no Icon Composer, com fundo opaco e sem vidro, reflexo, sombra ou refração extras. Sem PNG com máscara/arredondamento pré-renderizados.
+- O workflow gera `Trackr.xcodeproj` e disponibiliza `Trackr.ipa`.
+
+### Levar os dados da instalação anterior
+
+A mudança do bundle ID cria outra identidade e outro armazenamento no iPhone. Exporte um backup JSON no app antigo antes de instalar; no Trackr, use Dados e backup → Importar backup. Os registros financeiros usam o mesmo formato de backup. Preferências e autorização de notificações precisam ser configuradas novamente. O certificado e o perfil de assinatura precisam aceitar os novos identificadores do app e da extensão (e o App Group, quando utilizado). Não envie chaves privadas para o repositório.
+
+### Funcionalidades
+
 
 - Agenda permite dispensar contas agendadas e faturas por vencimento, sem pagamento ou débito. Arraste ou mantenha pressionado para dispensar; a seção Dispensados permite reativar. Dispensas são locais, incluídas no backup JSON e removidas na redefinição. Compras, limite e histórico das faturas não são alterados. Recorrências automáticas devem ser pausadas em Recorrentes.
 
@@ -27,7 +40,7 @@ Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações l
 - Listas e formulários com superfícies, cabeçalhos, espaçamento e ações de navegação compartilhados. Tab inicial e título usam Resumo.
 - Filtros no Extrato por natureza, período e categoria; opção Repetir lançamento abre uma nova cópia para revisar antes de salvar.
 - Evolução de entradas/saídas em seis meses e comparação de saídas até o mesmo dia do mês anterior. Compras no cartão não duplicam seus pagamentos de faturas nos totais da conta.
-- Nome interno e tradução do bundle corrigidos para Ledger; o botão oficial do Atalhos continua sendo utilizado.
+- Nome interno e tradução do bundle corrigidos para Trackr; o botão oficial do Atalhos continua sendo utilizado.
 
 - Resumo com Ajustes à esquerda e atalhos de ocultação e novo lançamento à direita; título grande que se recolhe ao rolar.
 - Nomes das categorias em cor primária do sistema (branco no modo escuro e preto no claro), preservando símbolos coloridos.
@@ -46,22 +59,22 @@ Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações l
 - Redefinição completa dos dados e preferências com confirmação; categorias e gráficos usam os símbolos e cores escolhidos.
 - Atalhos/Siri e lembretes de faturas, recorrências e contas agendadas continuam disponíveis.
 
-O bundle identifier permanece `com.mikhael.FinancialApp`. O nome exibido é Ledger; projeto e target continuam `FinancialApp` para preservar a identidade da instalação. Os seis modelos persistidos e o schema V2 não foram alterados nesta atualização.
+O bundle identifier passa a ser `com.mikhael.trackr`. O projeto, scheme, target e módulo agora se chamam `Trackr`. Os seis modelos persistidos e o schema V2 continuam com os mesmos campos; use o backup JSON para transferir os dados entre as duas identidades.
 
 ## Enviar e instalar
 
 ```powershell
 git status
 git add .
-git commit -m "Refina Ledger e adiciona widgets, backup e importacao bancaria"
+git commit -m "Refina Trackr e adiciona widgets, backup e importacao bancaria"
 git push
 ```
 
-Push em `main`/`master` inicia **Actions → Build Ledger IPA**. Também há **Run workflow**. Ao concluir, baixe **Artifacts → Ledger-unsigned**, extraia `Ledger.ipa` e assine/instale pelo seu fluxo habitual.
+Push em `main`/`master` inicia **Actions → Build Trackr IPA**. Também há **Run workflow**. Ao concluir, baixe **Artifacts → Trackr-unsigned**, extraia `Trackr.ipa` e assine/instale pelo seu fluxo habitual.
 
-O IPA contém `FinancialApp.app` e `PlugIns/LedgerWidgets.appex`. O instalador precisa preservar e assinar também a extensão para que os widgets apareçam. Widgets informativos precisam do App Group autorizado nos perfis de assinatura dos dois targets (veja abaixo). Não usam iCloud. A assinatura de dispositivo continua sendo uma etapa externa ao pipeline unsigned. [Execução em dispositivo — Apple](https://help.apple.com/xcode/mac/current/en.lproj/dev5a825a1ca.html).
+O IPA contém `Trackr.app` e `PlugIns/TrackrWidgets.appex`. O instalador precisa preservar e assinar também a extensão para que os widgets apareçam. Widgets informativos precisam do App Group autorizado nos perfis de assinatura dos dois targets (veja abaixo). Não usam iCloud. A assinatura de dispositivo continua sendo uma etapa externa ao pipeline unsigned. [Execução em dispositivo — Apple](https://help.apple.com/xcode/mac/current/en.lproj/dev5a825a1ca.html).
 
-Para manter os registros, atualize a instalação existente com a mesma identidade e não desinstale antes. Faça um backup pelo Ledger antes de trocar de instalação ou aparelho.
+Para manter os registros, atualize a instalação existente com a mesma identidade e não desinstale antes. Faça um backup pelo Trackr antes de trocar de instalação ou aparelho.
 
 ## Backup local: exportar e restaurar
 
@@ -120,16 +133,16 @@ Compras antes do fechamento entram no ciclo daquele mês; compras no dia ou apó
 
 R$ 1.200,00 em 10x gera dez parcelas de R$ 120,00. R$ 100,00 em 3x gera 33,34 + 33,33 + 33,33. Todos os valores persistidos usam centavos inteiros. O valor total compromete o limite; o pagamento registrado libera o limite e diminui o saldo da conta.
 
-Assinaturas e contas recorrentes têm ciclos semanal/mensal/anual. O dia original é preservado através de meses curtos. Pausar interrompe lançamentos/alertas futuros no Ledger, sem cancelar o serviço externo; retomar inicia nova agenda hoje. O app atualiza cobranças vencidas ao abrir/voltar ao primeiro plano. Contas avulsas só viram despesa ao marcar como pagas na Agenda.
+Assinaturas e contas recorrentes têm ciclos semanal/mensal/anual. O dia original é preservado através de meses curtos. Pausar interrompe lançamentos/alertas futuros no Trackr, sem cancelar o serviço externo; retomar inicia nova agenda hoje. O app atualiza cobranças vencidas ao abrir/voltar ao primeiro plano. Contas avulsas só viram despesa ao marcar como pagas na Agenda.
 
 ## Sistema e personalização
 
-- **Widgets:** adicione Ledger pela galeria. Pequeno mostra saldo e faturas; médio acrescenta entradas e saídas; grande mostra orçamento e próximos pagamentos. Respeitam ocultação de valores e sinalizam o horário do resumo. Usam uma cópia agregada dos dados; não abrem o banco SwiftData. A atualização depende do orçamento de execução do WidgetKit e não é em tempo real.
-- **Central de Controle:** no iOS 18+, pressione a Central de Controle → Adicionar um Controle → Ledger. As ações abrem o app na tela correspondente, sem registrar dinheiro automaticamente. Os intents estão nos dois targets, conforme exigência do OpenIntent.
-- **Ajustes do iOS:** em Apps → Ledger estão aparência, cor e ocultação de valores. Orçamentos, categorias e arquivos ficam nos Ajustes dentro do app.
-- **Atalhos/Siri:** consultar resumo, registrar despesa/receita, agendar conta, abrir Agenda, buscar e abrir lançamentos. Consultas financeiras e gravações exigem autenticação. Frases: “Qual é meu saldo no Ledger?”, “Registrar gasto no Ledger” e “Agendar conta no Ledger”.
+- **Widgets:** adicione Trackr pela galeria. Pequeno mostra saldo e faturas; médio acrescenta entradas e saídas; grande mostra orçamento e próximos pagamentos. Respeitam ocultação de valores e sinalizam o horário do resumo. Usam uma cópia agregada dos dados; não abrem o banco SwiftData. A atualização depende do orçamento de execução do WidgetKit e não é em tempo real.
+- **Central de Controle:** no iOS 18+, pressione a Central de Controle → Adicionar um Controle → Trackr. As ações abrem o app na tela correspondente, sem registrar dinheiro automaticamente. Os intents estão nos dois targets, conforme exigência do OpenIntent.
+- **Ajustes do iOS:** em Apps → Trackr estão aparência, cor e ocultação de valores. Orçamentos, categorias e arquivos ficam nos Ajustes dentro do app.
+- **Atalhos/Siri:** consultar resumo, registrar despesa/receita, agendar conta, abrir Agenda, buscar e abrir lançamentos. Consultas financeiras e gravações exigem autenticação. Frases: “Qual é meu saldo no Trackr?”, “Registrar gasto no Trackr” e “Agendar conta no Trackr”.
 - **Siri AI:** builds com SDK 27 habilitam o schema oficial `system.searchInApp`, que pesquisa o Extrato. Ações financeiras seguem via App Shortcuts, pois a Apple não oferece um domínio financeiro equivalente.
-- **Alertas:** configure horário e antecedência nos Ajustes do Ledger. Depois de agendados, funcionam com o app fechado. Mantemos os 60 alertas mais próximos dentro de 60 dias; abra o app periodicamente para renovar a fila. Pagamentos/edições/pausas removem ou atualizam alertas obsoletos. Foco e permissões do iOS influenciam a apresentação.
+- **Alertas:** configure horário e antecedência nos Ajustes do Trackr. Depois de agendados, funcionam com o app fechado. Mantemos os 60 alertas mais próximos dentro de 60 dias; abra o app periodicamente para renovar a fila. Pagamentos/edições/pausas removem ou atualizam alertas obsoletos. Foco e permissões do iOS influenciam a apresentação.
 
 Referências: [WidgetKit](https://developer.apple.com/documentation/widgetkit), [Settings bundle](https://developer.apple.com/documentation/foundation/building-a-settings-bundle-for-your-app), [Siri searchInApp](https://developer.apple.com/documentation/appintents/appschema/systemintent/searchinapp).
 
@@ -137,11 +150,11 @@ Referências: [WidgetKit](https://developer.apple.com/documentation/widgetkit), 
 
 Abra **Ajustes → Privacidade e segurança → Bloquear com Face ID/Touch ID**. A opção permanece desligada até uma autenticação bem-sucedida. Desativar também pede autenticação. É necessário configurar o código do aparelho; o iOS oferece esse código como alternativa quando a biometria não está disponível.
 
-O Ledger bloqueia no início de uma nova sessão e após ir para segundo plano. Abrir notificações, widgets, links e controles não evita a proteção. Com o bloqueio ativado, a prévia no seletor de apps é coberta por uma janela opaca da cena, acima inclusive de formulários e alertas; os campos em edição permanecem montados. Cancelar a autenticação mantém o bloqueio e permite tentar novamente pelo botão, sem repetir prompts em ciclo. Solicitações antigas não podem liberar a sessão após ela ter sido bloqueada novamente.
+O Trackr bloqueia no início de uma nova sessão e após ir para segundo plano. Abrir notificações, widgets, links e controles não evita a proteção. Com o bloqueio ativado, a prévia no seletor de apps é coberta por uma janela opaca da cena, acima inclusive de formulários e alertas; os campos em edição permanecem montados. Cancelar a autenticação mantém o bloqueio e permite tentar novamente pelo botão, sem repetir prompts em ciclo. Solicitações antigas não podem liberar a sessão após ela ter sido bloqueada novamente.
 
-Com a opção ativa, novos resumos compartilhados dos widgets não contêm valores nem descrições financeiras, e notificações usam título Ledger e texto genérico. A atualização de widgets segue os prazos do sistema. Atalhos que consultam ou alteram dados e consultas de entidades recusam acesso enquanto a sessão está bloqueada; abra/desbloqueie o Ledger antes de executá-los. As ações que apenas abrem telas continuam encaminhando à interface protegida.
+Com a opção ativa, novos resumos compartilhados dos widgets não contêm valores nem descrições financeiras, e notificações usam título Trackr e texto genérico. A atualização de widgets segue os prazos do sistema. Atalhos que consultam ou alteram dados e consultas de entidades recusam acesso enquanto a sessão está bloqueada; abra/desbloqueie o Trackr antes de executá-los. As ações que apenas abrem telas continuam encaminhando à interface protegida.
 
-Este recurso controla o acesso à interface e às ações do app. Não adiciona criptografia própria ao banco ou senha aos backups JSON exportados. As permissões de biometria e o código são gerenciados pelo iOS; o Ledger não recebe dados biométricos nem armazena o código. A redefinição completa do app desliga a preferência de bloqueio.
+Este recurso controla o acesso à interface e às ações do app. Não adiciona criptografia própria ao banco ou senha aos backups JSON exportados. As permissões de biometria e o código são gerenciados pelo iOS; o Trackr não recebe dados biométricos nem armazena o código. A redefinição completa do app desliga a preferência de bloqueio.
 
 Referências: [LocalAuthentication — Apple](https://developer.apple.com/documentation/localauthentication/logging-a-user-into-your-app-with-face-id-or-touch-id), [biometria ou código do aparelho](https://developer.apple.com/documentation/localauthentication/lapolicy/deviceownerauthentication), [ShortcutsLink nativo](https://developer.apple.com/documentation/appintents/shortcutslink).
 
@@ -154,9 +167,9 @@ Referências: [LocalAuthentication — Apple](https://developer.apple.com/docume
 
 ## App Groups e assinatura dos widgets
 
-O identificador padrão é `group.com.mikhael.FinancialApp`, configurado em `LEDGER_APP_GROUP` no `project.yml`, nos dois Info.plist e em `Shared/Ledger.entitlements`. O grupo deve ser registrado/autorizado para a sua equipe e incluído nos perfis do app e da extensão. Se o identificador não estiver disponível para sua equipe, altere **LEDGER_APP_GROUP** e registre outro grupo. Isso não altera o bundle identifier nem o banco principal.
+O identificador padrão é `group.com.mikhael.trackr`, configurado em `TRACKR_APP_GROUP` no `project.yml`, nos dois Info.plist e em `Shared/Trackr.entitlements`. O grupo deve ser registrado/autorizado para a sua equipe e incluído nos perfis do app e da extensão. Se o identificador não estiver disponível para sua equipe, altere **TRACKR_APP_GROUP** e registre outro grupo. Isso não altera o bundle identifier nem o banco principal.
 
-O pipeline continua gerando um IPA **unsigned**. Ele não cria perfis, não registra grupos e não concede permissões de assinatura. Ao reassinar, preserve a extensão, use o mesmo grupo autorizado nos dois targets e mantenha o valor **LedgerAppGroup** dos dois Info.plist coerente com o grupo provisionado. Alguns instaladores removem/recriam entitlements e não oferecem App Groups em contas gratuitas. Sem autorização, o app continua local e funcional; o widget mostra uma orientação, nunca um saldo inventado. Consulte a disponibilidade da capability na sua conta antes de depender do dashboard fora do app. Nenhum dado vai para iCloud.
+O pipeline continua gerando um IPA **unsigned**. Ele não cria perfis, não registra grupos e não concede permissões de assinatura. Ao reassinar, preserve a extensão, use o mesmo grupo autorizado nos dois targets e mantenha o valor **TrackrAppGroup** dos dois Info.plist coerente com o grupo provisionado. Alguns instaladores removem/recriam entitlements e não oferecem App Groups em contas gratuitas. Sem autorização, o app continua local e funcional; o widget mostra uma orientação, nunca um saldo inventado. Consulte a disponibilidade da capability na sua conta antes de depender do dashboard fora do app. Nenhum dado vai para iCloud.
 
 Referências: [App Groups — Apple](https://support.apple.com/en-ie/guide/security/sec1a976c067/web), [capabilities por modalidade de conta](https://developer.apple.com/help/account/reference/supported-capabilities-ios), [configurar App Groups](https://help.apple.com/xcode/mac/current/en.lproj/dev8dd3880fe.html), [controles e OpenIntent](https://developer.apple.com/documentation/widgetkit/creating-controls-to-perform-actions-across-the-system), [OCR local com Vision](https://developer.apple.com/documentation/vision/recognizing-text-in-images).
 
@@ -168,61 +181,61 @@ Referências: [App Groups — Apple](https://support.apple.com/en-ie/guide/secur
 
 ## Build e organização
 
-`project.yml` define o app, a extensão WidgetKit e os XCTest. `scripts/prepare_build.py` gera `project-ci.yml` com os mesmos caminhos. O workflow escolhe o Xcode mais novo já instalado na imagem macOS, executa os testes, arquiva sem assinatura e empacota `Payload/FinancialApp.app` em `Ledger.ipa`.
+`project.yml` define o app, a extensão WidgetKit e os XCTest. `scripts/prepare_build.py` gera `project-ci.yml` com os mesmos caminhos. O workflow escolhe o Xcode mais novo já instalado na imagem macOS, executa os testes, arquiva sem assinatura e empacota `Payload/Trackr.app` em `Trackr.ipa`.
 
-SDK 26+ usa o `.icon` nativo corrigido; SDK 27+ também habilita `LEDGER_SIRI_AI`. O deployment target continua iOS 17. O modo de linguagem é Swift 5 (`SWIFT_VERSION: '5.0'`), compilado pelo Swift moderno do Xcode. Não se usa `5.10` como build setting de versão de linguagem.
+SDK 26+ usa o `.icon` nativo corrigido; SDK 27+ também habilita `TRACKR_SIRI_AI`. O deployment target continua iOS 17. O modo de linguagem é Swift 5 (`SWIFT_VERSION: '5.0'`), compilado pelo Swift moderno do Xcode. Não se usa `5.10` como build setting de versão de linguagem.
 
 ```bash
 brew install xcodegen
 python3 -m unittest discover -s scripts/tests -v
 python3 scripts/prepare_build.py --sdk-version "$(xcrun --sdk iphoneos --show-sdk-version)"
 xcodegen generate --spec project-ci.yml
-xcodebuild test -project FinancialApp.xcodeproj -scheme FinancialApp \
+xcodebuild test -project Trackr.xcodeproj -scheme Trackr \
   -destination 'platform=iOS Simulator,id=SEU_UUID' \
   CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="-"
-xcodebuild archive -project FinancialApp.xcodeproj -scheme FinancialApp \
+xcodebuild archive -project Trackr.xcodeproj -scheme Trackr \
   -configuration Release -destination 'generic/platform=iOS' \
-  -archivePath "$PWD/build/FinancialApp.xcarchive" \
+  -archivePath "$PWD/build/Trackr.xcarchive" \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
 ```
 
 Os arquivos novos de maior interesse são:
 
 ```text
-FinancialApp/Services/BackupService.swift
-FinancialApp/Services/StatementParser.swift
-FinancialApp/Services/StatementImportService.swift
-FinancialApp/Services/LedgerPreferences.swift
-FinancialApp/Views/DataManagementView.swift
-FinancialApp/Views/StatementImportView.swift
-FinancialApp/Views/BudgetSettingsView.swift
-FinancialApp/Views/ReportsView.swift
-FinancialApp/Views/CategoryManagementView.swift
-FinancialApp/Settings.bundle/Root.plist
-LedgerWidgets/LedgerWidgets.swift
-LedgerWidgets/Info.plist
+Trackr/Services/BackupService.swift
+Trackr/Services/StatementParser.swift
+Trackr/Services/StatementImportService.swift
+Trackr/Services/TrackrPreferences.swift
+Trackr/Views/DataManagementView.swift
+Trackr/Views/StatementImportView.swift
+Trackr/Views/BudgetSettingsView.swift
+Trackr/Views/ReportsView.swift
+Trackr/Views/CategoryManagementView.swift
+Trackr/Settings.bundle/Root.plist
+TrackrWidgets/TrackrWidgets.swift
+TrackrWidgets/Info.plist
 Tests/BackupServiceTests.swift
 Tests/StatementImportTests.swift
-FinancialApp/Services/PDFStatementReader.swift
-FinancialApp/Services/AppResetService.swift
-FinancialApp/Services/WidgetSnapshotService.swift
-Shared/LedgerWidgetStore.swift
-Shared/LedgerControlIntent.swift
-Shared/Ledger.entitlements
-LedgerWidgets/LedgerControls.swift
+Trackr/Services/PDFStatementReader.swift
+Trackr/Services/AppResetService.swift
+Trackr/Services/WidgetSnapshotService.swift
+Shared/TrackrWidgetStore.swift
+Shared/TrackrControlIntent.swift
+Shared/Trackr.entitlements
+TrackrWidgets/TrackrControls.swift
 Tests/PDFStatementTests.swift
 Tests/ResetAndAgendaTests.swift
-FinancialApp/Services/AppLockService.swift
-FinancialApp/Services/FinancialReview.swift
-FinancialApp/Views/LedgerSecurityHost.swift
-FinancialApp/Views/CashFlowReviewView.swift
-FinancialApp/Views/InvoiceForecastChart.swift
-FinancialApp/pt-BR.lproj/InfoPlist.strings
+Trackr/Services/AppLockService.swift
+Trackr/Services/FinancialReview.swift
+Trackr/Views/TrackrSecurityHost.swift
+Trackr/Views/CashFlowReviewView.swift
+Trackr/Views/InvoiceForecastChart.swift
+Trackr/pt-BR.lproj/InfoPlist.strings
 Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **79 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também seis testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **81 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também oito testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 

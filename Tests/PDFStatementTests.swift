@@ -1,6 +1,6 @@
 import XCTest
 import UIKit
-@testable import FinancialApp
+@testable import Trackr
 
 final class PDFStatementTests: XCTestCase {
     func testPDFTextSkipsBalanceAndRequiresIndividualReview() throws {

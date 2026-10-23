@@ -1,0 +1,75 @@
+{
+  "features": [],
+  "fill": {
+    "linear-gradient": [
+      "srgb:0.03900,0.05720,0.22100,1.00000",
+      "srgb:0.07040,0.08832,0.24960,1.00000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0.5,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "groups": [
+    {
+      "blend-mode": "normal",
+      "blur-material": 0,
+      "hidden": false,
+      "layers": [
+        {
+          "blend-mode": "normal",
+          "fill": {
+            "solid": "srgb:0.94510,0.96863,0.92941,1.00000"
+          },
+          "glass": false,
+          "hidden": false,
+          "image-name": "TrackrLogo.svg",
+          "name": "Logo",
+          "opacity": 1,
+          "position": {
+            "scale": 1.12219,
+            "translation-in-points": [
+              20.48,
+              -30.72
+            ]
+          }
+        }
+      ],
+      "lighting": "individual",
+      "opacity": 1,
+      "position": {
+        "scale": 1,
+        "translation-in-points": [
+          0,
+          0
+        ]
+      },
+      "refractivity": {
+        "enabled": false,
+        "depth": 0,
+        "strength": 0
+      },
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}

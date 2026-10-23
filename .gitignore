@@ -6,6 +6,6 @@ build/
 *.ipa
 .DS_Store
 .swiftpm/
-FinancialApp-source.zip
+Trackr-source.zip
 project-ci.yml
 __pycache__/

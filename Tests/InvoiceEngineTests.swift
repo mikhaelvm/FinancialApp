@@ -1,5 +1,5 @@
 import XCTest
-@testable import FinancialApp
+@testable import Trackr
 
 final class InvoiceEngineTests: XCTestCase {
     private let engine = InvoiceEngine()

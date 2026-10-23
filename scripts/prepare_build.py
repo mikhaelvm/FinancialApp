@@ -9,11 +9,11 @@ import argparse
 
 def prepare_spec(source: str, sdk_major: int) -> str:
     if sdk_major < 26:
-        raise ValueError("Ledger requires Xcode 26+ to build (deployment target remains iOS 17).")
+        raise ValueError("Trackr requires Xcode 26+ to build (deployment target remains iOS 17).")
     if sdk_major >= 27:
         marker = "    SWIFT_VERSION: '5.0'"
         assert source.count(marker) == 1, "Swift language setting changed; update prepare_build.py"
-        return source.replace(marker, marker + '\n    SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) LEDGER_SIRI_AI"')
+        return source.replace(marker, marker + '\n    SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) TRACKR_SIRI_AI"')
     # The corrected .icon uses only SDK 26 features. Never reuse the pre-rendered
     # PNGs: their transparent corners/baked highlights caused the double frame.
     return source
@@ -32,7 +32,7 @@ def main() -> None:
         raise ValueError("The generated spec must be project-ci.yml in the repository root.")
     output.write_text(spec, encoding="utf-8")
     mode = "native icon + Siri AI search" if sdk_major >= 27 else "native icon + App Shortcuts (SDK 26)"
-    print(f"Ledger: {mode}")
+    print(f"Trackr: {mode}")
 
 
 if __name__ == "__main__":
