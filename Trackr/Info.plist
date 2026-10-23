@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+  <key>GIDClientID</key><string>$(TRACKR_GOOGLE_CLIENT_ID)</string>
+  <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>com.mikhael.trackr.backup.refresh</string></array>
+  <key>UIBackgroundModes</key><array><string>fetch</string></array>
   <key>TrackrAppGroup</key><string>$(TRACKR_APP_GROUP)</string>
   <key>CFBundleDisplayName</key><string>Trackr</string>
   <key>CFBundleDevelopmentRegion</key><string>pt_BR</string>
   <key>CFBundleURLTypes</key><array><dict>
     <key>CFBundleURLName</key><string>com.mikhael.trackr</string>
     <key>CFBundleURLSchemes</key><array><string>trackr</string></array>
+  </dict><dict>
+    <key>CFBundleURLSchemes</key><array><string>$(TRACKR_GOOGLE_REVERSED_CLIENT_ID)</string></array>
   </dict></array>
   <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
   <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>

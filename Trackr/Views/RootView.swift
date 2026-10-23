@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import Combine
+import GoogleSignIn
 
 struct RootView: View {
     @Environment(\.modelContext) private var context
@@ -21,16 +22,20 @@ struct RootView: View {
                 .tabItem { Label("Pagamentos", systemImage: "calendar") }.tag(TrackrTab.agenda)
         }
         .environment(router)
-        .onOpenURL { router.open($0) }
+        .onOpenURL { url in
+                if GoogleDriveBackupService.isConfigured, GIDSignIn.sharedInstance.handle(url) { return }
+                router.open(url)
+            }
         .sheet(isPresented: $router.showNewExpense) { AddTransactionView() }
         .sheet(isPresented: $router.showNewIncome) { AddTransactionView(initialKind: .income) }
         .onReceive(NotificationCenter.default.publisher(for: FinanceEvents.didChange)
             .debounce(for: .milliseconds(350), scheduler: RunLoop.main)) { _ in
                 NotificationService.shared.refresh(context: context)
                 WidgetSnapshotService.refresh(context: context)
+                GoogleDriveBackupService.shared.financialDataChanged()
             }
-        .task { refresh() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { refresh() } }
+        .task { refresh(); await GoogleDriveBackupService.shared.foreground() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { refresh(); Task { await GoogleDriveBackupService.shared.foreground() } } }
         .task {
             // Also catches midnight while the app stays open; no background entitlement required.
             while !Task.isCancelled {

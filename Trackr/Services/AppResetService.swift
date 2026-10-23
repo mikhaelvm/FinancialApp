@@ -21,6 +21,7 @@ enum AppResetService {
         Persistence.resetCategories(categories, context: context)
         do { try context.save() } catch { context.rollback(); throw error }
 
+        if defaults === UserDefaults.standard { GoogleDriveBackupService.shared.disconnect() }
         let revision = defaults.integer(forKey: "trackr.resetRevision") + 1
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("trackr.") || key.hasPrefix("reminders.") {
             defaults.removeObject(forKey: key)

@@ -2,7 +2,16 @@
 
 Finanças pessoais com SwiftUI, SwiftData, Charts, App Intents, notificações locais e WidgetKit. O armazenamento é **local**, sem CloudKit, servidor ou assinatura de sincronização. O projeto usa XcodeGen e compila no GitHub Actions, sem depender de um Mac local.
 
-## Versão 2.0.0 — Trackr
+## Versão 2.1.0 — Google Drive
+
+- Em Dados e backup, conecte o Google Drive para enviar e restaurar backups.
+- Backup manual e automático opcional, agrupado após alterações. Só envia quando os registros mudam.
+- Área privada no Drive, com cinco versões. Desconectar ou redefinir o app mantém os backups remotos.
+- Configuração necessária: siga [docs/GOOGLE_DRIVE.md](docs/GOOGLE_DRIVE.md) para criar seu Client ID OAuth. Sem ele, o app compila com a conexão desabilitada.
+- Segundo plano depende do iOS. Com proteção de acesso, envia somente durante uma sessão desbloqueada no app.
+
+### Identidade Trackr
+
 
 - Nome, código, pastas, targets, URLs (`trackr://`), widgets, controles, Atalhos e workflow renomeados para Trackr.
 - Bundle principal `com.mikhael.trackr`; App Group `group.com.mikhael.trackr`.
@@ -235,7 +244,7 @@ Tests/AppLockTests.swift
 Tests/FinancialReviewTests.swift
 ```
 
-Há **81 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também nove testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
+Há **88 testes XCTest**: regras financeiras originais, persistência, migração V1 → V2, lembretes, backup/restauração e importação bancária. Há também dez testes Python para preparação do build, ícone e configuração compartilhada dos widgets/controles. As verificações nativas também cobrem PDF, exclusão de pagamentos, redefinição, categorias, sessão de bloqueio (com autenticador simulado), cálculos da evolução e cópias de lançamentos.
 
 A autoria é feita no Windows: parser Swift, YAML, plists e testes Python ajudam a revisar a estrutura, mas não substituem compilação no SDK da Apple. Esta atualização precisa passar pelo workflow macOS e ser conferida no aparelho, especialmente ícone, widgets, fontes ampliadas, autorização de notificações e importação de um extrato real de cada layout utilizado. A versão anterior já foi compilada/instalada pelo usuário; isso não confirma a compilação desta versão.
 

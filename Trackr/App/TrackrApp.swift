@@ -12,6 +12,7 @@ struct TrackrApp: App {
     @AppStorage("trackr.resetRevision") private var resetRevision = 0
 
     init() {
+        GoogleDriveBackupService.registerBackground()
         UNUserNotificationCenter.current().delegate = TrackrNotificationDelegate.shared
         do {
             container = try Persistence.sharedContainer()

@@ -88,6 +88,27 @@ class BuildSpecTests(unittest.TestCase):
         # Packaging Payload into the IPA is still required by the iOS format.
         self.assertIn('zip -qry ../Trackr.ipa Payload', workflow)
 
+    def test_google_drive_configuration_does_not_require_credentials_to_build(self):
+        import plistlib
+        root = Path(__file__).resolve().parents[2]
+        self.assertIn("TRACKR_GOOGLE_CLIENT_ID:", self.source)
+        import re
+        client = re.search(r"(?m)^    TRACKR_GOOGLE_CLIENT_ID:\s*([^\n]*)$", self.source).group(1).strip().strip("\"'")
+        scheme = re.search(r"(?m)^    TRACKR_GOOGLE_REVERSED_CLIENT_ID:\s*([^\n]*)$", self.source).group(1).strip().strip("\"'")
+        if client:
+            self.assertTrue(client.endswith('.apps.googleusercontent.com'))
+            self.assertEqual(scheme, '.'.join(reversed(client.split('.'))))
+        self.assertIn('exactVersion: 9.0.0', self.source)
+        self.assertIn('product: GoogleSignIn', self.source)
+        self.assertIn('BackgroundTasks.framework', self.source)
+        with open(root / 'Trackr/Info.plist', 'rb') as stream:
+            info = plistlib.load(stream)
+        self.assertEqual(info['GIDClientID'], '$(TRACKR_GOOGLE_CLIENT_ID)')
+        self.assertIn('fetch', info['UIBackgroundModes'])
+        self.assertIn('com.mikhael.trackr.backup.refresh', info['BGTaskSchedulerPermittedIdentifiers'])
+        self.assertTrue(any('$(TRACKR_GOOGLE_REVERSED_CLIENT_ID)' in item['CFBundleURLSchemes'] for item in info['CFBundleURLTypes']))
+        self.assertNotIn('GoogleSignIn', self.source.split('  TrackrWidgets:')[1])
+
     def test_app_identity_and_face_id_permission_are_present(self):
         import plistlib
         root = Path(__file__).resolve().parents[2]

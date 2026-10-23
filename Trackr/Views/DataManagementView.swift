@@ -31,6 +31,11 @@ struct DataManagementView: View {
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section {
+                NavigationLink { GoogleDriveBackupView() } label: {
+                    Label("Google Drive", systemImage: "externaldrive.badge.icloud")
+                }
+            } header: { Text("Backup na nuvem") }
+            Section {
                 Button("Exportar backup completo", systemImage: "square.and.arrow.up") { exportBackup() }
                 Button("Importar backup", systemImage: "square.and.arrow.down") { importing = true }
                 LabeledContent("Último backup exportado", value: lastBackupExport > 0 ? Date(timeIntervalSince1970: lastBackupExport).formatted(date: .abbreviated, time: .shortened) : "Nenhum ainda")
