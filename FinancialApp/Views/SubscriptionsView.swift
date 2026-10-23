@@ -26,7 +26,7 @@ struct SubscriptionsView: View {
             PaymentsSectionPicker()
             Section {
                 LedgerSummaryHeader(eyebrow: "Seu compromisso mensal fixo", title: Money.format(monthlyCents),
-                                    subtitle: "\(subscriptions.filter(\.isActive).count) recorrências ativas • média mensal", symbol: "repeat")
+                                    subtitle: "\(subscriptions.filter(\.isActive).count) recorrências ativas", symbol: "repeat")
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             }
             if subscriptions.isEmpty {
@@ -64,7 +64,7 @@ struct SubscriptionsView: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(subscription.title).font(.headline)
                                     Text(subscription.category?.name ?? "Sem categoria").font(.caption).foregroundStyle(.secondary)
-                                    Text(subscription.card?.name ?? "Débito / conta")
+                                    Text(subscription.card?.name ?? "Saldo em conta")
                                         .font(.caption).foregroundStyle(.secondary)
                                     if subscription.isActive {
                                         Text("Próxima: \(subscription.nextRenewalDate.formatted(date: .abbreviated, time: .omitted))")
@@ -78,19 +78,13 @@ struct SubscriptionsView: View {
                                 }
                             }
                         }.buttonStyle(.plain)
-                        Toggle("Registrar próximas cobranças", isOn: Binding(get: { subscription.isActive }, set: { active in
-                            do { try viewModel.setActive(active, subscription: subscription, context: context) }
-                            catch { self.error = error.localizedDescription }
-                        })).font(.caption)
                     }
                     .swipeActions {
                         Button("Excluir", role: .destructive) { deleting = subscription }.tint(.red)
                         Button("Editar") { editing = subscription }.tint(.blue)
                     }
                 }
-            } header: { Text(showActive ? "Serviços e contas recorrentes" : "Recorrências pausadas") } footer: {
-                Text("Média: mensal = valor; anual ÷ 12; semanal × 52 ÷ 12. Pausar no Ledger interrompe os lançamentos futuros e os alertas; não cancela sua contratação com o serviço.")
-            }
+            } header: { Text("Recorrências")}
         }
         .ledgerListScreen("Pagamentos")
         .toolbar { LedgerToolbarButton("Adicionar assinatura", systemImage: "plus") { showAdd = true } }

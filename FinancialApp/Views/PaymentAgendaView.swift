@@ -44,7 +44,7 @@ struct PaymentAgendaView: View {
             PaymentsSectionPicker()
             Section {
                 LedgerSummaryHeader(eyebrow: "Saídas previstas • próximos 7 dias", title: Money.format(nextWeekCents),
-                                    subtitle: "Faturas, contas e recorrências na conta, sem somar cobranças no cartão duas vezes.",
+                                    subtitle: "Faturas, contas e recorrências.",
                                     symbol: "calendar.badge.clock")
                     .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
             }
@@ -54,8 +54,8 @@ struct PaymentAgendaView: View {
                 }.pickerStyle(.segmented)
             }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
             if filter == .dismissed {
-                Section("Sem efeito no saldo") {
-                    let items = allCommitments.filter { dismissedSet.contains($0.id) }
+                Section {
+                    let items = allCommitments.filter { dismissedSet.contains($0.id) && PaymentDismissalStore.isVisible(dueDate: $0.dueDate) }
                     if items.isEmpty { Text("Nenhum compromisso dispensado.").foregroundStyle(.secondary) }
                     ForEach(items) { item in
                         VStack(alignment: .leading, spacing: 8) {
@@ -67,7 +67,7 @@ struct PaymentAgendaView: View {
                     }
                 }
             } else if filter == .paid {
-                Section("Contas concluídas") {
+                Section {
                     if !scheduled.contains(where: \.isPaid) {
                         ContentUnavailableView("Tudo em seu tempo", systemImage: "checkmark.circle",
                                                description: Text("As contas agendadas que você marcar como pagas aparecerão aqui."))
@@ -120,11 +120,8 @@ struct PaymentAgendaView: View {
                     }
                 }
             }
-            Section {
-                Label("Lembretes de vencimento", systemImage: "bell.badge")
+            Section("Lembretes de vencimento") {
                 Button("Configurar notificações e Siri") { showSettings = true }
-            } footer: {
-                Text("Contas e recorrências dos próximos 60 dias, com apenas a próxima fatura pendente de cada cartão. Todas as faturas atrasadas continuam visíveis. Cobranças no cartão aparecem junto à fatura, mas não aumentam o total de saídas da conta novamente. Assinaturas na conta são lançadas automaticamente na data de renovação.")
             }
         }
         .ledgerListScreen("Pagamentos")
@@ -138,7 +135,7 @@ struct PaymentAgendaView: View {
                 dismissing = nil
             }
         } message: {
-            Text("Sai da Agenda e dos lembretes, sem descontar do saldo ou registrar pagamento. Compras, limite do cartão e histórico da fatura permanecem. Você pode reativá-lo em Dispensados. Somente este vencimento será dispensado.")
+            Text("Sai da Agenda e dos lembretes, sem descontar do saldo ou registrar pagamento. Compras, limite do cartão e histórico da fatura permanecem. Você pode reativá-lo em Dispensados.")
         }
         .confirmationDialog("Confirmar pagamento?", isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }), titleVisibility: .visible) {
             Button("Registrar pagamento") {

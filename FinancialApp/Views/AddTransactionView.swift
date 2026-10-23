@@ -4,7 +4,7 @@ import SwiftData
 enum EntryMode: String, CaseIterable, Identifiable {
     case single = "Gasto ou receita"
     case installment = "Compra parcelada"
-    case subscription = "Conta recorrente / assinatura"
+    case subscription = "Conta recorrente"
     case scheduled = "Conta a pagar"
     var id: String { rawValue }
 }
@@ -28,6 +28,7 @@ struct AddTransactionView: View {
     @State private var categoryID: UUID?
     @State private var cardID: UUID?
     @State private var installments = 2
+    @State private var billingAction = RecurrenceBillingAction.keep
     @State private var cycle = BillingCycle.monthly
     @State private var error: String?
     @State private var loaded = false
@@ -93,10 +94,23 @@ struct AddTransactionView: View {
                         DatePicker("Data", selection: $date, in: ...Date.now, displayedComponents: .date)
                     }
                 }
+                if subscription != nil {
+                    Section {
+                        Picker("Próximas cobranças", selection: $billingAction) {
+                            ForEach(RecurrenceBillingAction.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                    } header: { Text("Recorrência") } footer: {
+                        Text(billingAction == .skipNext
+                             ? "Ao salvar, somente a renovação selecionada será pulada. As seguintes mantêm a periodicidade e o dia original. Nenhuma despesa é criada para a cobrança suspensa."
+                             : (billingAction == .pause
+                                ? "Ao salvar, os lançamentos futuros e os lembretes serão pausados até você reativar nesta edição. Isso não cancela o serviço contratado."
+                                : "Ao salvar, as próximas cobranças serão registradas automaticamente a partir da data de renovação escolhida."))
+                    }
+                }
                 if transaction == nil && mode != .scheduled && (mode != .single || kind == .expense) {
                     Section {
                         Picker("Cobrança", selection: $cardID) {
-                            if mode != .installment { Text("Débito / conta").tag(nil as UUID?) }
+                            if mode != .installment { Text("Conta").tag(nil as UUID?) }
                             if mode == .installment && cardID == nil { Text("Selecione um cartão").tag(nil as UUID?) }
                             ForEach(cards) { card in Text(card.name).tag(Optional(card.id)) }
                         }
@@ -165,6 +179,7 @@ struct AddTransactionView: View {
         if let subscription {
             mode = .subscription; title = subscription.title; amount = Money.input(subscription.amountCents)
             date = max(subscription.nextRenewalDate, FinanceDate.day(.now))
+            billingAction = subscription.isActive ? .keep : .pause
             categoryID = subscription.category?.id; cardID = subscription.card?.id; cycle = subscription.cycle
         }
     }
@@ -181,7 +196,7 @@ struct AddTransactionView: View {
             } else if mode == .subscription {
                 try SubscriptionViewModel().save(context: context, subscription: subscription, title: title,
                                                   amountText: amount, cycle: cycle, renewalDate: date,
-                                                  category: selectedCategory, card: selectedCard)
+                                                  category: selectedCategory, card: selectedCard, billingAction: subscription == nil ? nil : billingAction)
             } else if mode == .installment || (kind == .expense && selectedCard != nil && transaction == nil) {
                 guard let card = selectedCard else { throw FinanceError.invalid("Selecione um cartão.") }
                 try CreditCardViewModel().purchase(context: context, title: title, amountCents: cents,

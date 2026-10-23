@@ -10,7 +10,7 @@ struct TransactionsView: View {
     @Query(sort: \Category.name) private var categories: [Category]
     @Query private var cards: [CreditCard]
     @State private var viewingPurchase: CardPurchaseGroup?
-    @State private var period = LedgerTransactionPeriod.all
+    @State private var selectedMonth = FinanceDate.month(.now)
     @State private var kind: TransactionKind?
     @State private var categoryID: UUID?
     @State private var repeating: LedgerTransactionDraft?
@@ -21,44 +21,65 @@ struct TransactionsView: View {
     @Environment(LedgerRouter.self) private var router
     @State private var error: String?
 
+    private var availableMonths: [Date] {
+        Set(transactions.map { FinanceDate.month($0.date) }
+            + payments.map { FinanceDate.month($0.date) }
+            + [FinanceDate.month(.now), selectedMonth]).sorted(by: >)
+    }
     private var cash: [Transaction] {
         transactions.filter {
-            $0.card == nil && period.includes($0.date) && (kind == nil || $0.kind == kind)
+            $0.card == nil && FinanceDate.sameMonth($0.date, selectedMonth) && (kind == nil || $0.kind == kind)
                 && (categoryID == nil || $0.category?.id == categoryID)
                 && (router.searchTerm.isEmpty || $0.title.localizedCaseInsensitiveContains(router.searchTerm))
         }
     }
-    private var hasFilters: Bool { period != .all || kind != nil || categoryID != nil || !router.searchTerm.isEmpty }
+    private var hasFilters: Bool { kind != nil || categoryID != nil || !router.searchTerm.isEmpty }
     private var cardPurchases: [CardPurchaseGroup] {
         guard kind != .income else { return [] }
         return CardPurchaseService.groups(for: cards).filter {
-            period.includes($0.date) && (categoryID == nil || $0.category?.id == categoryID)
+            FinanceDate.sameMonth($0.date, selectedMonth) && (categoryID == nil || $0.category?.id == categoryID)
                 && (router.searchTerm.isEmpty || $0.title.localizedCaseInsensitiveContains(router.searchTerm) || $0.card.name.localizedCaseInsensitiveContains(router.searchTerm))
         }
     }
     private var visiblePayments: [InvoicePayment] {
-        payments.filter { period.includes($0.date) && kind != .income && categoryID == nil
+        payments.filter { FinanceDate.sameMonth($0.date, selectedMonth) && kind != .income && categoryID == nil
             && (router.searchTerm.isEmpty || ($0.card?.name ?? "").localizedCaseInsensitiveContains(router.searchTerm)) }
     }
     var body: some View {
         List {
+            Section {
+                HStack {
+                    Button { selectedMonth = FinanceDate.monthOffset(-1, from: selectedMonth) } label: {
+                        Image(systemName: "chevron.left").padding(.vertical, 8)
+                    }.buttonStyle(.plain).accessibilityLabel("Mês anterior")
+                    Spacer(minLength: 8)
+                    Picker("Mês", selection: $selectedMonth) {
+                        ForEach(availableMonths, id: \.self) { month in
+                            Text(FinanceDate.monthTitle(month)).tag(month)
+                        }
+                    }.labelsHidden().accessibilityLabel("Mês do extrato")
+                    Spacer(minLength: 8)
+                    Button { selectedMonth = FinanceDate.monthOffset(1, from: selectedMonth) } label: {
+                        Image(systemName: "chevron.right").padding(.vertical, 8)
+                    }.buttonStyle(.plain).accessibilityLabel("Próximo mês")
+                }
+            } header: { Text("Mês do extrato") }
             Section {
                 Picker("Natureza", selection: $kind) {
                     Text("Todos").tag(nil as TransactionKind?)
                     Text("Despesas").tag(Optional(TransactionKind.expense))
                     Text("Receitas").tag(Optional(TransactionKind.income))
                 }.pickerStyle(.segmented)
-                Picker("Período", selection: $period) { ForEach(LedgerTransactionPeriod.allCases) { Text($0.rawValue).tag($0) } }
                 Picker("Categoria", selection: $categoryID) {
                     Text("Todas").tag(nil as UUID?)
                     ForEach(categories) { Text($0.name).tag(Optional($0.id)) }
                 }
                 if hasFilters { Button("Limpar filtros") { clearFilters() } }
-            } header: { Text("Filtrar extrato") }
+            } header: { Text("Filtros") }
             Section("Lançamentos na conta") {
                 if cash.isEmpty && cardPurchases.isEmpty && visiblePayments.isEmpty {
                     ContentUnavailableView(hasFilters ? "Nenhum resultado" : "Nenhuma transação", systemImage: hasFilters ? "line.3.horizontal.decrease.circle" : "banknote",
-                                           description: Text(hasFilters ? "Tente outro período, categoria ou termo de busca." : "Adicione receitas e despesas. Para saldo inicial, registre uma receita."))
+                                           description: Text(hasFilters ? "Tente outro mês, categoria ou termo de busca." : "Não há lançamentos neste mês. Escolha outro mês ou adicione receitas e despesas."))
                 }
                 ForEach(cash) { transaction in
                     let managed = transaction.isAutomaticRecurrence || scheduled.contains { $0.paidTransactionID == transaction.id }
@@ -115,6 +136,9 @@ struct TransactionsView: View {
         .sheet(item: $repeating) { AddTransactionView(draft: $0) }
         .sheet(item: $viewingPurchase) { CardPurchaseDetailView(card: $0.card, purchaseID: $0.purchaseID) }
         .onAppear(perform: openRequestedTransaction)
+        .onChange(of: router.selectedTab) { _, tab in
+            if tab == .transactions { selectedMonth = FinanceDate.month(.now); openRequestedTransaction() }
+        }
         .onChange(of: router.selectedTransactionID) { _, _ in openRequestedTransaction() }
         .confirmationDialog("Excluir esta transação?", isPresented: Binding(
             get: { deleting != nil }, set: { if !$0 { deleting = nil } }
@@ -133,9 +157,10 @@ struct TransactionsView: View {
     private func openRequestedTransaction() {
         guard let id = router.selectedTransactionID else { return }
         viewing = transactions.first { $0.id == id }
+        if let viewing { selectedMonth = FinanceDate.month(viewing.date) }
         router.selectedTransactionID = nil
     }
-    private func clearFilters() { period = .all; kind = nil; categoryID = nil; router.searchTerm = "" }
+    private func clearFilters() { kind = nil; categoryID = nil; router.searchTerm = "" }
 }
 
 private struct LedgerTransactionRow: View {

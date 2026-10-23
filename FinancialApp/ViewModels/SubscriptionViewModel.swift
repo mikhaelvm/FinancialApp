@@ -2,11 +2,16 @@ import Foundation
 import Observation
 import SwiftData
 
+enum RecurrenceBillingAction: String, CaseIterable, Identifiable {
+    case keep = "Cobrar normalmente", skipNext = "Suspender próxima cobrança", pause = "Pausar indefinidamente"
+    var id: String { rawValue }
+}
+
 @MainActor @Observable
 final class SubscriptionViewModel {
     func save(context: ModelContext, subscription: Subscription? = nil, title: String,
               amountText: String, cycle: BillingCycle, renewalDate: Date,
-              category: Category?, card: CreditCard?) throws {
+              category: Category?, card: CreditCard?, billingAction: RecurrenceBillingAction? = nil) throws {
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, let cents = Money.parse(amountText),
               FinanceDate.day(renewalDate) >= FinanceDate.day(.now) else {
@@ -28,6 +33,13 @@ final class SubscriptionViewModel {
                 subscription.scheduleID = UUID()
             }
             subscription.nextRenewalDate = renewal
+            if let billingAction {
+                subscription.isActive = billingAction != .pause
+                if billingAction == .skipNext {
+                    subscription.nextOccurrenceIndex += 1
+                    subscription.nextRenewalDate = RecurrenceEngine().date(for: subscription, index: subscription.nextOccurrenceIndex)
+                }
+            }
         } else {
             context.insert(Subscription(title: name, amountCents: cents, cycle: cycle,
                                          nextRenewalDate: renewal, category: category, card: card))

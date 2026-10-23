@@ -5,6 +5,10 @@ enum PaymentDismissalStore {
     static func invoiceID(cardID: UUID, dueDate: Date) -> String {
         "invoice:\(cardID):\(FinanceDate.month(dueDate).timeIntervalSince1970)"
     }
+    static func isVisible(dueDate: Date, today: Date = .now) -> Bool {
+        let cutoff = FinanceDate.calendar.date(byAdding: .day, value: -30, to: FinanceDate.day(today))!
+        return FinanceDate.day(dueDate) >= cutoff
+    }
     static let key = "ledger.dismissedPayments"
     static func ids(defaults: UserDefaults = .standard) -> Set<String> {
         Set((defaults.string(forKey: key) ?? "").split(separator: "\n").map(String.init))

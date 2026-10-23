@@ -84,6 +84,35 @@ final class LedgerPlanningTests: XCTestCase {
         XCTAssertEqual(after.categories.reduce(0) { $0 + $1.cents }, before.categories.reduce(0) { $0 + $1.cents })
     }
 
+    func testSkippingOneRenewalPreservesMonthEndAnchorAndPauseDoesNotCharge() throws {
+        let container = try Persistence.makeContainer(inMemory: true)
+        let context = container.mainContext
+        let january = FinanceDate.calendar.date(from: DateComponents(year: 2027, month: 1, day: 31))!
+        let subscription = Subscription(title: "Conta", amountCents: 1000, cycle: .monthly,
+                                        nextRenewalDate: january, category: nil, card: nil)
+        context.insert(subscription); try context.save()
+        let model = SubscriptionViewModel()
+        try model.save(context: context, subscription: subscription, title: "Conta", amountText: "10,00",
+                       cycle: .monthly, renewalDate: january, category: nil, card: nil, billingAction: .skipNext)
+        XCTAssertTrue(subscription.isActive)
+        XCTAssertEqual(subscription.nextOccurrenceIndex, 1)
+        XCTAssertEqual(FinanceDate.calendar.component(.month, from: subscription.nextRenewalDate), 2)
+        XCTAssertEqual(FinanceDate.calendar.component(.day, from: subscription.nextRenewalDate), 28)
+        XCTAssertEqual(FinanceDate.calendar.component(.day, from: RecurrenceEngine().date(for: subscription, index: 2)), 31)
+        try model.save(context: context, subscription: subscription, title: "Conta", amountText: "10,00",
+                       cycle: .monthly, renewalDate: subscription.nextRenewalDate, category: nil, card: nil, billingAction: .pause)
+        XCTAssertFalse(subscription.isActive)
+        XCTAssertTrue(RecurrenceEngine().occurrences(of: subscription, through: .distantFuture).isEmpty)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Transaction>()), 0)
+    }
+
+    func testDismissedListExpiresOnlyAfterThirtyDaysFromDueDate() {
+        let today = date(31)
+        XCTAssertTrue(PaymentDismissalStore.isVisible(dueDate: date(1), today: today))
+        let previousDay = FinanceDate.calendar.date(byAdding: .day, value: -1, to: date(1))!
+        XCTAssertFalse(PaymentDismissalStore.isVisible(dueDate: previousDay, today: today))
+    }
+
     func testReminderIncludesAdvanceAndDueDayAtChosenHour() {
         let preferences = ReminderPreferences(enabled: true, daysBefore: 3, hour: 10, minute: 30)
         let reminders = ReminderPlanner().reminders(for: [item(due: date(25))], preferences: preferences, now: date(21))

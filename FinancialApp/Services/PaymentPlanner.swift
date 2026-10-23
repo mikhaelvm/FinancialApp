@@ -59,7 +59,7 @@ struct PaymentPlanner {
             }
         }
         for subscription in subscriptions where subscription.isActive {
-            let method = subscription.card?.name ?? "Débito / conta"
+            let method = subscription.card?.name ?? "Saldo em conta"
             for occurrence in RecurrenceEngine().occurrences(of: subscription, through: horizon) {
                 result.append(PaymentCommitment(id: "subscription:\(occurrence.key)", title: subscription.title,
                                                  amountCents: subscription.amountCents, dueDate: occurrence.date,
