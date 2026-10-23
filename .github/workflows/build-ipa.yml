@@ -53,6 +53,14 @@ jobs:
           python3 scripts/prepare_build.py --sdk-version "$(xcrun --sdk iphoneos --show-sdk-version)"
           xcodegen generate --spec project-ci.yml
 
+      - name: Resolve Swift package dependencies
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies \
+            -project Trackr.xcodeproj \
+            -scheme Trackr \
+            -clonedSourcePackagesDirPath "$PWD/build/SourcePackages"
+
       - name: Select available iPhone simulator
         run: |
           set -euo pipefail
@@ -69,11 +77,14 @@ jobs:
       - name: Test business rules and persistence
         run: |
           set -euo pipefail
-          xcodebuild test \
+          python3 scripts/run_xcodebuild.py --log-prefix build/ci-logs/test -- xcodebuild test \
             -project Trackr.xcodeproj \
             -scheme Trackr \
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -jobs 2 \
+            -derivedDataPath "$PWD/build/TestDerivedData" \
+            -clonedSourcePackagesDirPath "$PWD/build/SourcePackages" \
             -parallel-testing-enabled NO \
             -resultBundlePath build/TestResults.xcresult \
             CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="-"
@@ -88,6 +99,8 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$PWD/build/Trackr.xcarchive" \
             -derivedDataPath "$PWD/build/DerivedData" \
+            -clonedSourcePackagesDirPath "$PWD/build/SourcePackages" \
+            -jobs 2 \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
@@ -118,6 +131,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: iOS-TestResults
-          path: build/TestResults.xcresult
+          path: |
+            build/TestResults*.xcresult
+            build/ci-logs/*.log
           if-no-files-found: ignore
           retention-days: 7
