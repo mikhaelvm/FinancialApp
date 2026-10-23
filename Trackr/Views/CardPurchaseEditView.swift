@@ -23,7 +23,7 @@ struct CardPurchaseEditView: View {
         NavigationStack {
             Form {
                 if let purchase {
-                    Section("Compra") {
+                    Section {
                         TextField("Título", text: $title).focused($focused).submitLabel(.done).onSubmit { focused = false }
                         HStack {
                             Text("R$").foregroundStyle(.secondary)
@@ -39,7 +39,7 @@ struct CardPurchaseEditView: View {
                             Text("Sem categoria").tag(nil as UUID?)
                             ForEach(categories) { Text($0.name).tag(Optional($0.id)) }
                         }
-                    } footer: {
+                    } header: { Text("Compra") } footer: {
                         Text(purchase.isRecurring ? "Edita somente esta cobrança; as próximas seguem a recorrência." : "Valor, data e parcelas recalculam as faturas. Pagamentos já feitos são mantidos.")
                     }
                 } else { ContentUnavailableView("Compra removida", systemImage: "bag") }
